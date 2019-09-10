@@ -1,9 +1,8 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
-import com.petersamokhin.bots.sdk.objects.Message;
+
+import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 
 public interface Stage {
-	boolean applicable(Message message);
-
-	void accept(Message message);
+	void accept(ExtendedMessage message);
 }

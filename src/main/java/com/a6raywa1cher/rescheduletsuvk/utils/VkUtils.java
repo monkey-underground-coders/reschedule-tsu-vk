@@ -3,7 +3,10 @@ package com.a6raywa1cher.rescheduletsuvk.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.petersamokhin.bots.sdk.clients.Group;
+import com.vk.api.sdk.client.VkApiClient;
+import com.vk.api.sdk.client.actors.GroupActor;
+import com.vk.api.sdk.exceptions.ApiException;
+import com.vk.api.sdk.exceptions.ClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,22 +15,26 @@ import java.util.Arrays;
 public class VkUtils {
 	private static final Logger log = LoggerFactory.getLogger(VkUtils.class);
 
-	public static void sendMessage(Group group, Integer peerId, String message) {
-		sendMessage(group, peerId, message, null);
+	public static void sendMessage(VkApiClient vk, GroupActor group, Integer peerId, String message) {
+		sendMessage(vk, group, peerId, message, null);
 	}
 
-	public static void sendMessage(Group group, Integer peerId, String message, String keyboard) {
+	public static void sendMessage(VkApiClient vk, GroupActor group, Integer peerId, String message, String keyboard) {
 		if (keyboard == null) keyboard = "{\"buttons\":[],\"one_time\":true}"; // clear keyboard
 		ObjectMapper objectMapper = new ObjectMapper();
 		ObjectNode params = objectMapper.createObjectNode()
 				.put("message", message)
 				.put("peer_id", peerId)
 				.put("keyboard", keyboard);
-		group.api().call("messages.send", params.toString(), response -> {
-			if (!(response instanceof Integer)) {
-				log.error("Message not sent: {}", response);
-			}
-		});
+		try {
+			vk.messages().send(group)
+					.message(message)
+					.peerId(peerId)
+					.unsafeParam("keyboard", keyboard)
+					.execute();
+		} catch (ApiException | ClientException e) {
+			log.error("Message not sent", e);
+		}
 	}
 
 	public static String createKeyboard(boolean oneTime, VkKeyboardButton... buttonsDescriptions) {

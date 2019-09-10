@@ -1,44 +1,42 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
+import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
-import com.a6raywa1cher.rescheduletsuvk.utils.VkKeyboardButton;
+import com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent;
 import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
-import com.petersamokhin.bots.sdk.clients.Group;
-import com.petersamokhin.bots.sdk.objects.Message;
+import com.vk.api.sdk.client.VkApiClient;
+import com.vk.api.sdk.client.actors.GroupActor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Component
 public class WelcomeStage implements PrimaryStage {
-	private Group group;
+	private VkApiClient vk;
+	private GroupActor groupActor;
 	private RtsServerRestComponent restComponent;
+	private ConfigureUserStage configureUserStage;
+	private StageRouterComponent stageRouterComponent;
 
 	@Autowired
-	public WelcomeStage(Group group, RtsServerRestComponent restComponent) {
-		this.group = group;
+	public WelcomeStage(VkApiClient vk, GroupActor groupActor, RtsServerRestComponent restComponent,
+	                    ConfigureUserStage configureUserStage, StageRouterComponent stageRouterComponent) {
+		this.vk = vk;
+		this.groupActor = groupActor;
 		this.restComponent = restComponent;
+		this.configureUserStage = configureUserStage;
+		this.stageRouterComponent = stageRouterComponent;
 	}
 
+
 	@Override
-	public void accept(Message message) {
-		restComponent.getFaculties()
-				.thenAccept(response -> {
-					List<VkKeyboardButton> buttons = new ArrayList<>();
-					for (String facultyId : response.getFaculties()) {
-						buttons.add(new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, facultyId));
-					}
-					VkUtils.sendMessage(group, message.authorId(),
-							"Приветствуем в ВК-боте проекта reschedule-tsu!\n" +
-									"Цель этого бота - дать возможность глядеть расписание ТвГУ через ВК :D\n" +
-									"\u27a1\ufe0fТелега бот: @TverSU_Timings_bot\n" +
-									"Данные берутся из открытой базы данных ТвГУ, и тут пока не все факультеты.\n"
-					);
-					VkUtils.sendMessage(group, message.authorId(),
-							"\u2b07\ufe0fВыбери свой, если он присутствует\u2b07\ufe0f",
-							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
-				});
+	public void accept(ExtendedMessage message) {
+		VkUtils.sendMessage(vk, groupActor, message.getUserId(),
+				"Приветствуем в ВК-боте проекта reschedule-tsu!\n" +
+						"Цель этого бота - дать возможность глядеть расписание ТвГУ через ВК :D\n" +
+						"\u27a1\ufe0fТелега бот: @TverSU_Timings_bot\n" +
+						"Данные берутся из открытой базы данных ТвГУ, и тут пока не все факультеты.\n"
+		);
+		configureUserStage.accept(message);
 	}
+
 }

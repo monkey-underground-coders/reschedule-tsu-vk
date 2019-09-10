@@ -2,55 +2,66 @@ package com.a6raywa1cher.rescheduletsuvk.component;
 
 import com.a6raywa1cher.rescheduletsuvk.stages.PrimaryStage;
 import com.a6raywa1cher.rescheduletsuvk.stages.Stage;
-import com.petersamokhin.bots.sdk.clients.Group;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vk.api.sdk.client.VkApiClient;
+import com.vk.api.sdk.client.actors.GroupActor;
+import com.vk.api.sdk.exceptions.ApiException;
+import com.vk.api.sdk.exceptions.ClientException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class StageRouterComponent {
-	private final Group group;
-	private final List<? extends Stage> stageList;
+	public static final String ROUTE = "route";
+	private final Map<String, ? extends Stage> stageMap;
 	private final PrimaryStage primaryStage;
-	private final Map<Integer, Stage> integerStageMap;
+	private final VkApiClient vk;
+	private final GroupActor groupActor;
 
 	@Autowired
-	public StageRouterComponent(Group group, List<? extends Stage> stageList, PrimaryStage primaryStage) {
-		this.group = group;
-		this.stageList = stageList;
+	public StageRouterComponent(VkApiClient vk, GroupActor groupActor,
+	                            @Lazy Map<String, ? extends Stage> stageMap, @Lazy PrimaryStage primaryStage) {
+		this.stageMap = stageMap;
 		this.primaryStage = primaryStage;
-		stageList.remove(primaryStage);
-		integerStageMap = new ConcurrentHashMap<>();
-	}
-
-	public synchronized void link(Integer integer, Stage stage) {
-		integerStageMap.put(integer, stage);
-	}
-
-	public synchronized void unlink(Integer integer) {
-		integerStageMap.remove(integer);
+		this.vk = vk;
+		this.groupActor = groupActor;
 	}
 
 	@PostConstruct
-	public void onStart() {
-		group.onMessage(message -> {
-			if (integerStageMap.containsKey(message.authorId())) {
-				integerStageMap.get(message.authorId()).accept(message);
-				return;
+	public void onStart() throws ClientException, ApiException {
+		vk.groups().setLongPollSettings(groupActor).enabled(true)
+				.messageNew(true)
+				.execute();
+	}
+
+	public void startListening() {
+		CallbackApiLongPollHandler handler = new CallbackApiLongPollHandler(vk, groupActor, this);
+		while (true) {
+			try {
+				handler.run();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			Optional<? extends Stage> anyStage = stageList.stream()
-					.filter(stage -> stage.applicable(message))
-					.findAny();
-			if (anyStage.isPresent()) {
-				anyStage.get().accept(message);
-			} else {
+		}
+	}
+
+	public void routeMessage(ExtendedMessage message) {
+		if (message.getPayload() != null) {
+			ObjectMapper objectMapper = new ObjectMapper();
+			try {
+				JsonNode jsonNode = objectMapper.readTree(message.getPayload());
+				stageMap.get(jsonNode.get(ROUTE).asText()).accept(message);
+			} catch (JsonProcessingException e) {
 				primaryStage.accept(message);
 			}
-		});
+		} else {
+			primaryStage.accept(message);
+		}
 	}
 }
