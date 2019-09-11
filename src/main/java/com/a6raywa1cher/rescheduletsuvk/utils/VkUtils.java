@@ -21,17 +21,21 @@ public class VkUtils {
 
 	public static void sendMessage(VkApiClient vk, GroupActor group, Integer peerId, String message, String keyboard) {
 		if (keyboard == null) keyboard = "{\"buttons\":[],\"one_time\":true}"; // clear keyboard
-		ObjectMapper objectMapper = new ObjectMapper();
-		ObjectNode params = objectMapper.createObjectNode()
-				.put("message", message)
-				.put("peer_id", peerId)
-				.put("keyboard", keyboard);
 		try {
-			vk.messages().send(group)
-					.message(message)
-					.peerId(peerId)
-					.unsafeParam("keyboard", keyboard)
-					.execute();
+			if (!keyboard.equals("")) {
+				vk.messages().send(group)
+						.message(message)
+						.peerId(peerId)
+						.unsafeParam("dont_parse_links", 1)
+						.unsafeParam("keyboard", keyboard)
+						.execute();
+			} else {
+				vk.messages().send(group)
+						.message(message)
+						.peerId(peerId)
+						.unsafeParam("dont_parse_links", 1)
+						.execute();
+			}
 		} catch (ApiException | ClientException e) {
 			log.error("Message not sent", e);
 		}
@@ -46,11 +50,31 @@ public class VkUtils {
 		ArrayNode allButtons = objectMapper.createArrayNode();
 		ArrayNode buttonsRaw = objectMapper.createArrayNode();
 		if (grid == null) {
-			int fullRaws = buttonsDescriptions.length / 4;
-			int remaining = buttonsDescriptions.length % 4;
-			grid = new int[fullRaws != 0 ? 4 : remaining];
-			Arrays.fill(grid, fullRaws);
-			if (remaining > 0) Arrays.fill(grid, 0, remaining, fullRaws + 1);
+			int size = buttonsDescriptions.length;
+			int maxWidth, maxHeight;
+			if (16 < size) {
+				maxWidth = 4;
+				maxHeight = 17;
+			} else if (9 < size) {
+				maxWidth = 4;
+				maxHeight = 4;
+			} else if (4 < size) {
+				maxWidth = 3;
+				maxHeight = 3;
+			} else {
+				maxWidth = 2;
+				maxHeight = 2;
+			}
+			int fullColumns = size / maxHeight;
+			if (fullColumns > maxWidth) {
+				throw new IllegalArgumentException("Too many data!");
+			}
+			int remaining = size % maxHeight;
+			grid = new int[fullColumns == 0 ? remaining : maxHeight];
+			int baseFill = fullColumns;
+			int extendedFill = baseFill + 1;
+			Arrays.fill(grid, remaining, grid.length, baseFill);
+			Arrays.fill(grid, 0, remaining, extendedFill);
 		}
 		int currRaw = 0;
 		int posInRaw = 0;

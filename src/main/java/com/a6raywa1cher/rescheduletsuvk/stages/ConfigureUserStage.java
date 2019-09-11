@@ -2,6 +2,7 @@ package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
+import com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.dao.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
@@ -12,6 +13,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -24,19 +27,22 @@ import static com.a6raywa1cher.rescheduletsuvk.stages.ConfigureUserStage.NAME;
 @Component(NAME)
 public class ConfigureUserStage implements Stage {
 	public static final String NAME = "configureUserStage";
+	private static final Logger log = LoggerFactory.getLogger(ConfigureUserStage.class);
 	private VkApiClient vk;
 	private GroupActor groupActor;
 	private RtsServerRestComponent restComponent;
 	private Map<Integer, Integer> step;
 	private UserInfoService service;
+	private StageRouterComponent component;
 
 	@Autowired
 	public ConfigureUserStage(VkApiClient vk, GroupActor groupActor, RtsServerRestComponent restComponent,
-	                          UserInfoService service) {
+	                          UserInfoService service, StageRouterComponent component) {
 		this.vk = vk;
 		this.groupActor = groupActor;
 		this.restComponent = restComponent;
 		this.service = service;
+		this.component = component;
 		this.step = new HashMap<>();
 	}
 
@@ -57,6 +63,10 @@ public class ConfigureUserStage implements Stage {
 							"\u2b07\ufe0fВыбери свой, если он присутствует\u2b07\ufe0f",
 							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
 					step.put(peerId, 2);
+				})
+				.exceptionally(e -> {
+					log.error("step 1 error", e);
+					return null;
 				});
 	}
 
@@ -86,6 +96,10 @@ public class ConfigureUserStage implements Stage {
 							"\u2b07\ufe0fХорошо, теперь выбери, где ты учишься\u2b07\ufe0f",
 							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
 					step.put(peerId, 3);
+				})
+				.exceptionally(e -> {
+					log.error("step 2 error", e);
+					return null;
 				});
 	}
 
@@ -117,6 +131,10 @@ public class ConfigureUserStage implements Stage {
 							"\u2b07\ufe0fОкей, теперь курс?\u2b07\ufe0f",
 							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
 					step.put(peerId, 4);
+				})
+				.exceptionally(e -> {
+					log.error("step 3 error", e);
+					return null;
 				});
 	}
 
@@ -151,6 +169,10 @@ public class ConfigureUserStage implements Stage {
 							"\u2b07\ufe0fПрекрасно, последний шаг. Твоя группа?\u2b07\ufe0f",
 							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
 					step.put(peerId, 5);
+				})
+				.exceptionally(e -> {
+					log.error("step 4 error", e);
+					return null;
 				});
 	}
 
@@ -179,6 +201,11 @@ public class ConfigureUserStage implements Stage {
 					service.save(userInfo);
 					VkUtils.sendMessage(vk, groupActor, message.getUserId(), "Всё настроено!");
 					step.remove(peerId);
+
+				})
+				.exceptionally(e -> {
+					log.error("step 5 error", e);
+					return null;
 				});
 	}
 

@@ -9,17 +9,22 @@ import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
 import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class StageRouterComponent {
 	public static final String ROUTE = "route";
+	private static final Logger log = LoggerFactory.getLogger(StageRouterComponent.class);
 	private final Map<String, ? extends Stage> stageMap;
+	private final Map<Integer, Stage> hardlinkMap;
 	private final PrimaryStage primaryStage;
 	private final VkApiClient vk;
 	private final GroupActor groupActor;
@@ -31,6 +36,7 @@ public class StageRouterComponent {
 		this.primaryStage = primaryStage;
 		this.vk = vk;
 		this.groupActor = groupActor;
+		this.hardlinkMap = new ConcurrentHashMap<>();
 	}
 
 	@PostConstruct
@@ -40,14 +46,30 @@ public class StageRouterComponent {
 				.execute();
 	}
 
+	public void link(Integer peerId, Stage stage) {
+		hardlinkMap.put(peerId, stage);
+	}
+
+	public void unlink(Integer peerId) {
+		hardlinkMap.remove(peerId);
+	}
+
 	public void startListening() {
 		CallbackApiLongPollHandler handler = new CallbackApiLongPollHandler(vk, groupActor, this);
 		while (true) {
 			try {
 				handler.run();
 			} catch (Exception e) {
-				e.printStackTrace();
+				log.error("Listening error", e);
 			}
+		}
+	}
+
+	public void routeMessage(ExtendedMessage message, String stage) {
+		if (stageMap.containsKey(stage)) {
+			stageMap.get(stage).accept(message);
+		} else {
+			throw new IllegalArgumentException("No such route");
 		}
 	}
 
@@ -61,7 +83,7 @@ public class StageRouterComponent {
 				primaryStage.accept(message);
 			}
 		} else {
-			primaryStage.accept(message);
+			hardlinkMap.getOrDefault(message.getUserId(), primaryStage).accept(message);
 		}
 	}
 }
