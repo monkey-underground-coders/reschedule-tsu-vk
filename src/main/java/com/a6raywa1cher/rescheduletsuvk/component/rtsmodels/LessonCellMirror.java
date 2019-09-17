@@ -38,5 +38,7 @@ public class LessonCellMirror {
 
 	private Integer subgroup;
 
+	private Boolean crossPair;
+
 	private String faculty;
 }

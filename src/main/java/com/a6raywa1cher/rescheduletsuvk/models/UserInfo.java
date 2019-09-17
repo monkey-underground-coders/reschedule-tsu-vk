@@ -12,9 +12,12 @@ public class UserInfo {
 	@Id
 	private Integer peerId;
 
-	@Column
+	@Column(nullable = false)
 	private String facultyId;
 
-	@Column
+	@Column(nullable = false)
 	private String groupId;
+
+	@Column
+	private Integer subgroup;
 }

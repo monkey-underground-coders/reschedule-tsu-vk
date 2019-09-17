@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static com.a6raywa1cher.rescheduletsuvk.stages.WelcomeStage.NAME;
+import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.ARROW_RIGHT_EMOJI;
 
 @Component(NAME)
 public class WelcomeStage implements PrimaryStage {
@@ -37,7 +38,7 @@ public class WelcomeStage implements PrimaryStage {
 			VkUtils.sendMessage(vk, groupActor, message.getUserId(),
 					"Приветствуем в ВК-боте проекта reschedule-tsu!\n" +
 							"Цель этого бота - дать возможность глядеть расписание ТвГУ через ВК :D\n" +
-							"\u27a1\ufe0fТелега бот: https://teleg.run/TverSU_Timings_bot\n" +
+							ARROW_RIGHT_EMOJI + "Телега бот: https://teleg.run/TverSU_Timings_bot\n" +
 							"Данные берутся из открытой базы данных ТвГУ, и тут пока не все факультеты.\n"
 			);
 			stageRouterComponent.routeMessage(message, ConfigureUserStage.NAME);

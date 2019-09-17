@@ -8,4 +8,6 @@ public interface UserInfoService {
 	Optional<UserInfo> getById(Integer id);
 
 	UserInfo save(UserInfo userInfo);
+
+	void delete(UserInfo userInfo);
 }

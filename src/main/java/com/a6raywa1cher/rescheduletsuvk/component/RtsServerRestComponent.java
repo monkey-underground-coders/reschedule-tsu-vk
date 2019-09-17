@@ -1,9 +1,8 @@
 package com.a6raywa1cher.rescheduletsuvk.component;
 
-import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetFacultiesResponse;
-import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
-import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetScheduleForWeekResponse;
+import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.*;
 import com.a6raywa1cher.rescheduletsuvk.config.AppConfigProperties;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.net.UrlEscapers;
@@ -15,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
@@ -52,6 +52,22 @@ public class RtsServerRestComponent {
 		}, executor);
 	}
 
+	private <T> CompletionStage<T> request(String url, TypeReference<T> typeReference) {
+		return CompletableFuture.supplyAsync(() -> {
+			ObjectMapper objectMapper = new ObjectMapper()
+					.registerModule(new JavaTimeModule());
+			try {
+				return objectMapper.readValue(this.rts.resolve(url).toURL(), typeReference);
+			} catch (MalformedURLException e) {
+				log.error("Bad url?", e);
+				throw new RuntimeException(e);
+			} catch (IOException e) {
+				log.error(String.format("IOException during call to %s", url), e);
+				throw new RuntimeException(e);
+			}
+		}, executor);
+	}
+
 	public CompletionStage<GetFacultiesResponse> getFaculties() {
 		return request("faculties", GetFacultiesResponse.class);
 	}
@@ -63,5 +79,16 @@ public class RtsServerRestComponent {
 
 	public CompletionStage<GetGroupsResponse> getGroups(String facultyId) {
 		return request(encodeValue(facultyId) + "/groups", GetGroupsResponse.class);
+	}
+
+	public CompletionStage<List<LessonCellMirror>> getRawSchedule(String facultyId, String groupId) {
+		return request(encodeValue(facultyId) + "/group/" + encodeValue(groupId),
+				new TypeReference<>() {
+				}
+		);
+	}
+
+	public CompletionStage<GetWeekSignResponse> getWeekSign(String facultyId) {
+		return request(encodeValue(facultyId) + "/week_sign", GetWeekSignResponse.class);
 	}
 }
