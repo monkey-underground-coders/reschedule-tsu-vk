@@ -18,6 +18,7 @@
     <properties>
         <java.version>12</java.version>
         <jackson.version>2.10.0.pr2</jackson.version>
+        <maven.test.skip>true</maven.test.skip>
     </properties>
 
     <dependencies>

@@ -164,12 +164,15 @@ public class ConfigureUserStage implements Stage {
 							.distinct()
 							.sorted()
 							.map(groupName -> new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY,
-									groupName, objectMapper.createObjectNode()
-									.put(ROUTE, NAME)
-									.put("level", level)
-									.put("course", course)
-									.set("building", payload.get("building"))
-									.toString()))
+									groupName.length() >= 40 ? groupName.substring(0, 20) + "..." +
+											groupName.substring(groupName.length() - 15) : groupName,
+									objectMapper.createObjectNode()
+											.put(ROUTE, NAME)
+											.put("level", level)
+											.put("course", course)
+											.put("groupName", groupName)
+											.set("building", payload.get("building"))
+											.toString()))
 							.collect(Collectors.toList());
 					VkUtils.sendMessage(vk, groupActor, message.getUserId(),
 							ARROW_DOWN_EMOJI + "Прекрасно, последний шаг. Твоя группа?" + ARROW_DOWN_EMOJI,
@@ -189,9 +192,9 @@ public class ConfigureUserStage implements Stage {
 			return;
 		}
 		ObjectMapper objectMapper = new ObjectMapper();
-		String groupId = message.getBody();
 		JsonNode payload = objectMapper.readTree(message.getPayload());
 		String facultyId = payload.get("building").get("facultyId").asText();
+		String groupId = payload.get("groupName").asText();
 		restComponent.getGroups(facultyId)
 				.thenCompose(response -> {
 					Optional<GetGroupsResponse.GroupInfo> optionalGroupInfo = response.getGroups().stream()
@@ -331,6 +334,7 @@ public class ConfigureUserStage implements Stage {
 	@Override
 	public void accept(ExtendedMessage message) {
 		Integer peerId = message.getUserId();
+		if (message.getPayload() == null) step.put(peerId, 1);
 		step.putIfAbsent(peerId, 1);
 		try {
 			switch (step.get(peerId)) {

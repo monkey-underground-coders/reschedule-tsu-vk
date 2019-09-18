@@ -6,9 +6,11 @@ import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class UserInfoServiceImpl implements UserInfoService {
 	private UserInfoRepository repository;
 

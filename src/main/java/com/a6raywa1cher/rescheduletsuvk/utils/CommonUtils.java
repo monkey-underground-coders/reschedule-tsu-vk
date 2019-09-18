@@ -61,8 +61,6 @@ public class CommonUtils {
 	}
 
 	public static String convertLessonCell(LessonCellMirror mirror, boolean today, boolean detailed) {
-		String building = mirror.getAuditoryAddress().split("\\|")[0];
-		String auditory = mirror.getAuditoryAddress().split("\\|")[1];
 		boolean subgroup = mirror.getSubgroup() != 0;
 		String out = emojifyDigit(mirror.getColumnPosition() + 1);
 		if (today) {
@@ -79,7 +77,7 @@ public class CommonUtils {
 				mirror.getStart().format(DateTimeFormatter.ofPattern("HH:mm")),
 				mirror.getEnd().format(DateTimeFormatter.ofPattern("HH:mm")),
 				mirror.getFullSubjectName());
-		if (!detailed) {
+		if (!detailed && mirror.getTeacherName() != null) {
 			String[] fullTeacherName = mirror.getTeacherName().split(" ");
 			for (int i = 1; i < fullTeacherName.length; i++) {
 				fullTeacherName[i] = findFirstCapitalLetter(fullTeacherName[i]);
@@ -95,11 +93,15 @@ public class CommonUtils {
 			}
 			out += String.format("%s, ", sb.toString());
 		}
-		out += String.format("ауд.%s, к.%s",
-				auditory, building);
+		if (mirror.getAuditoryAddress() != null) {
+			String building = mirror.getAuditoryAddress().split("\\|")[0];
+			String auditory = mirror.getAuditoryAddress().split("\\|")[1];
+			out += String.format("ауд.%s, к.%s",
+					auditory, building);
+		}
 		out += (subgroup ? " " + SINGLE_SUBGROUP_EMOJI : "") // is subgroup separated from another subgroup
 				+ (mirror.getCrossPair() ? " " + CROSS_PAIR_EMOJI : ""); // is cross-pair
-		if (detailed) {
+		if (detailed && mirror.getTeacherName() != null) {
 			out += String.format("\n" + TEACHER_EMOJI + " %s %s\n",
 					mirror.getTeacherTitle(), mirror.getTeacherName());
 		}

@@ -5,8 +5,11 @@ import com.google.gson.JsonObject;
 import com.vk.api.sdk.callback.longpoll.CallbackApiLongPoll;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CallbackApiLongPollHandler extends CallbackApiLongPoll {
+	private static final Logger log = LoggerFactory.getLogger(CallbackApiLongPollHandler.class);
 	private StageRouterComponent component;
 	private Gson gson;
 
@@ -25,6 +28,7 @@ public class CallbackApiLongPollHandler extends CallbackApiLongPoll {
 			component.routeMessage(gson.fromJson(info, ExtendedMessage.class));
 			return true;
 		} catch (Exception e) {
+			log.error("Parse exception", e);
 			return super.parse(json);
 		}
 	}

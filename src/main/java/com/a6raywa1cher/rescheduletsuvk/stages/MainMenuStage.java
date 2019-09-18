@@ -14,6 +14,8 @@ import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +38,7 @@ public class MainMenuStage implements Stage {
 	private static final String GET_NEXT_LESSON = "Какая следующая пара?";
 	private static final String DROP_SETTINGS = "Изменить группу";
 	private static final String GET_INFO = "Информация";
+	private static final Logger log = LoggerFactory.getLogger(MainMenuStage.class);
 	private VkApiClient vk;
 	private GroupActor group;
 	private StageRouterComponent stageRouterComponent;
@@ -81,6 +84,10 @@ public class MainMenuStage implements Stage {
 					}
 					VkUtils.sendMessage(vk, group, message.getUserId(),
 							sb.toString(), getDefaultKeyboard());
+				})
+				.exceptionally(e -> {
+					log.error("Get seven days error\n" + message.toString() + "\n", e);
+					return null;
 				});
 	}
 
@@ -105,6 +112,10 @@ public class MainMenuStage implements Stage {
 								getDefaultKeyboard());
 					}
 					return null;
+				})
+				.exceptionally(e -> {
+					log.error("Get today lessons error\n" + extendedMessage.toString() + "\n", e);
+					return null;
 				});
 	}
 
@@ -116,7 +127,7 @@ public class MainMenuStage implements Stage {
 							.filter(cell -> cell.getDayOfWeek().equals(localDateTime.getDayOfWeek()))
 							.filter(cell -> cell.getWeekSign().equals(WeekSign.ANY) ||
 									cell.getWeekSign().equals(weekSignResult.getWeekSign()))
-							.filter(cell -> cell.getEnd().isAfter(localDateTime.toLocalTime()))
+							.filter(cell -> cell.getStart().isAfter(localDateTime.toLocalTime()))
 							.filter(cell -> cell.getSubgroup() == 0 || cell.getSubgroup().equals(userInfo.getSubgroup()))
 							.findFirst();
 					if (nextLesson.isEmpty()) {
@@ -128,6 +139,10 @@ public class MainMenuStage implements Stage {
 								CommonUtils.convertLessonCell(nextLesson.get(), true, true),
 								getDefaultKeyboard());
 					}
+					return null;
+				})
+				.exceptionally(e -> {
+					log.error("Get next lesson error\n" + extendedMessage.toString() + "\n", e);
 					return null;
 				});
 	}
@@ -172,6 +187,10 @@ public class MainMenuStage implements Stage {
 										finalWeekSign, false, todayLessons, true),
 								getDefaultKeyboard());
 					}
+					return null;
+				})
+				.exceptionally(e -> {
+					log.error("Get tomorrow lessons error\n" + extendedMessage.toString() + "\n", e);
 					return null;
 				});
 	}

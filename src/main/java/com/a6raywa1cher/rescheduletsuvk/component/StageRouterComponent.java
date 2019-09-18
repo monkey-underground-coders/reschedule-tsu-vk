@@ -2,7 +2,6 @@ package com.a6raywa1cher.rescheduletsuvk.component;
 
 import com.a6raywa1cher.rescheduletsuvk.stages.PrimaryStage;
 import com.a6raywa1cher.rescheduletsuvk.stages.Stage;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vk.api.sdk.client.VkApiClient;
@@ -78,11 +77,15 @@ public class StageRouterComponent {
 			ObjectMapper objectMapper = new ObjectMapper();
 			try {
 				JsonNode jsonNode = objectMapper.readTree(message.getPayload());
+				log.debug("Routing user {} message with payload to " + jsonNode.get(ROUTE).asText(), message.getUserId());
 				stageMap.get(jsonNode.get(ROUTE).asText()).accept(message);
-			} catch (JsonProcessingException e) {
+			} catch (Exception e) {
+				log.debug("Failover routing user {} to primaryStage", message.getUserId());
 				primaryStage.accept(message);
 			}
 		} else {
+			log.debug("Routing payload-blank message from {} to {}", message.getUserId(),
+					hardlinkMap.getOrDefault(message.getUserId(), primaryStage).getClass().getName());
 			hardlinkMap.getOrDefault(message.getUserId(), primaryStage).accept(message);
 		}
 	}

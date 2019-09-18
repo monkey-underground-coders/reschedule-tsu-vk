@@ -29,3 +29,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+application-dev.yml
+application-staging.yml
+application-prod.yml
+logs
+deploy-staging.sh
