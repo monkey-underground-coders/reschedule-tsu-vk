@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-
     <property name="LOGS" value="./logs"/>
 
     <appender name="Console"
@@ -42,6 +41,9 @@
     <logger name="com.a6raywa1cher" level="trace" additivity="false">
         <appender-ref ref="RollingFile"/>
         <appender-ref ref="Console"/>
+    </logger>
+
+    <logger name="com.vk.api.sdk.httpclient.HttpTransportClient" level="info" additivity="false">
     </logger>
 
 </configuration>

@@ -73,22 +73,22 @@ public class RtsServerRestComponent {
 	}
 
 	public CompletionStage<GetScheduleForWeekResponse> getScheduleForWeek(String facultyId, String groupId) {
-		return request(encodeValue(facultyId) + "/group/" + encodeValue(groupId) + "/week",
+		return request("faculties/" + encodeValue(facultyId) + "/groups/" + encodeValue(groupId) + "/week",
 				GetScheduleForWeekResponse.class);
 	}
 
 	public CompletionStage<GetGroupsResponse> getGroups(String facultyId) {
-		return request(encodeValue(facultyId) + "/groups", GetGroupsResponse.class);
+		return request("faculties/" + encodeValue(facultyId) + "/groups", GetGroupsResponse.class);
 	}
 
 	public CompletionStage<List<LessonCellMirror>> getRawSchedule(String facultyId, String groupId) {
-		return request(encodeValue(facultyId) + "/group/" + encodeValue(groupId),
+		return request("faculties/" + encodeValue(facultyId) + "/groups/" + encodeValue(groupId),
 				new TypeReference<>() {
 				}
 		);
 	}
 
 	public CompletionStage<GetWeekSignResponse> getWeekSign(String facultyId) {
-		return request(encodeValue(facultyId) + "/week_sign", GetWeekSignResponse.class);
+		return request("faculties/" + encodeValue(facultyId) + "/week_sign", GetWeekSignResponse.class);
 	}
 }
