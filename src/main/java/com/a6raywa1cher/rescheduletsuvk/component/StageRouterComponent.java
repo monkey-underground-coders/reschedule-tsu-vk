@@ -1,5 +1,6 @@
 package com.a6raywa1cher.rescheduletsuvk.component;
 
+import com.a6raywa1cher.rescheduletsuvk.globalstages.GlobalListeningStage;
 import com.a6raywa1cher.rescheduletsuvk.stages.PrimaryStage;
 import com.a6raywa1cher.rescheduletsuvk.stages.Stage;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,6 +16,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,14 +26,18 @@ public class StageRouterComponent {
 	private static final Logger log = LoggerFactory.getLogger(StageRouterComponent.class);
 	private final Map<String, ? extends Stage> stageMap;
 	private final Map<Integer, Stage> hardlinkMap;
+	private final List<? extends GlobalListeningStage> globalListeners;
 	private final PrimaryStage primaryStage;
 	private final VkApiClient vk;
 	private final GroupActor groupActor;
 
 	@Autowired
 	public StageRouterComponent(VkApiClient vk, GroupActor groupActor,
-	                            @Lazy Map<String, ? extends Stage> stageMap, @Lazy PrimaryStage primaryStage) {
+	                            @Lazy Map<String, ? extends Stage> stageMap,
+	                            @Lazy List<? extends GlobalListeningStage> globalListeners,
+	                            @Lazy PrimaryStage primaryStage) {
 		this.stageMap = stageMap;
+		this.globalListeners = globalListeners;
 		this.primaryStage = primaryStage;
 		this.vk = vk;
 		this.groupActor = groupActor;
@@ -73,6 +79,13 @@ public class StageRouterComponent {
 	}
 
 	public void routeMessage(ExtendedMessage message) {
+		for (GlobalListeningStage globalListeningStage : globalListeners) {
+			if (globalListeningStage.process(message)) {
+				log.info("Global listener {} stopped processing of {}'s message",
+						globalListeningStage.getClass().toString(), message.getUserId());
+				return;
+			}
+		}
 		if (message.getPayload() != null) {
 			ObjectMapper objectMapper = new ObjectMapper();
 			try {
