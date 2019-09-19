@@ -257,33 +257,34 @@ public class ConfigureUserStage implements Stage {
 														new VkKeyboardButton(VkKeyboardButton.Color.NEGATIVE, "Нет",
 																objectMapper.createObjectNode()
 																		.put(ROUTE, NAME)
-																		.put("subgroup", (firstSituation.getSubgroup() + 1) % 2)
+																		.put("subgroup", 1 + (firstSituation.getSubgroup() % 2))
 																		.put("groupId", groupId)
 																		.put("facultyId", facultyId)
 																		.toString()))
 										);
 									} else if (secondSituation != null) {
-										LessonCellMirror mirror = secondSituation.getSecond();
+										LessonCellMirror mirror1 = secondSituation.getFirst();
+										LessonCellMirror mirror2 = secondSituation.getSecond();
 										VkUtils.sendMessage(vk, groupActor, message.getUserId(),
 												"Упс, не последний. Известно, что у этой группы есть подгруппы.\n" +
 														"Есть ли у тебя вот эта пара?\n" +
 														String.format("%s (%s)",
-																mirror.getDayOfWeek().getDisplayName(TextStyle.FULL,
+																mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
 																		Locale.forLanguageTag("ru-RU")),
-																mirror.getWeekSign().getPrettyString()) +
-														CommonUtils.convertLessonCell(mirror, false, true),
+																mirror1.getWeekSign().getPrettyString()) +
+														CommonUtils.convertLessonCell(mirror1, false, true),
 												VkUtils.createKeyboard(true,
 														new VkKeyboardButton(VkKeyboardButton.Color.POSITIVE, "Да",
 																objectMapper.createObjectNode()
 																		.put(ROUTE, NAME)
-																		.put("subgroup", mirror.getSubgroup())
+																		.put("subgroup", mirror1.getSubgroup())
 																		.put("groupId", groupId)
 																		.put("facultyId", facultyId)
 																		.toString()),
 														new VkKeyboardButton(VkKeyboardButton.Color.NEGATIVE, "Нет",
 																objectMapper.createObjectNode()
 																		.put(ROUTE, NAME)
-																		.put("subgroup", (mirror.getSubgroup() + 1) % 2)
+																		.put("subgroup", mirror2.getSubgroup())
 																		.put("groupId", groupId)
 																		.put("facultyId", facultyId)
 																		.toString()))
