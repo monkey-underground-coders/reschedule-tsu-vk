@@ -2,13 +2,16 @@ package com.a6raywa1cher.rescheduletsuvk.utils;
 
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import org.springframework.data.util.Pair;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
-import java.util.Collection;
-import java.util.Locale;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class CommonUtils {
 	public static final String CROSS_PAIR_EMOJI = "\ud83d\udd17";
@@ -20,6 +23,7 @@ public class CommonUtils {
 	public static final String COOKIES_EMOJI = "\uD83C\uDF6A";
 	public static final String ARROW_DOWN_EMOJI = "\u2b07\ufe0f";
 	public static final String ARROW_RIGHT_EMOJI = "\u27a1\ufe0f";
+	public static final String GROUPS_EMOJI = "\uD83D\uDC65";
 
 	public static String emojifyDigit(int digit) {
 		String[] digits = new String[]{
@@ -39,13 +43,35 @@ public class CommonUtils {
 
 	public static String convertLessonCells(DayOfWeek dayOfWeek, WeekSign weekSign, boolean today,
 	                                        Collection<LessonCellMirror> lessonCellMirrors, boolean detailed) {
+		return convertLessonCells(dayOfWeek, weekSign, today, lessonCellMirrors, detailed,
+				true, false);
+	}
+
+	public static String convertLessonCells(DayOfWeek dayOfWeek, WeekSign weekSign, boolean today,
+	                                        Collection<LessonCellMirror> lessonCellMirrors, boolean detailed,
+	                                        boolean showTeachers, boolean showGroups) {
 		StringBuilder sb = new StringBuilder();
 		sb.append(String.format("%s (%s):\n",
 				dayOfWeek.getDisplayName(TextStyle.FULL, Locale.forLanguageTag("ru-RU")),
 				weekSign.getPrettyString()
 		));
+		Map<Integer, Set<LessonCellMirror>> map = new HashMap<>();
 		for (LessonCellMirror cellMirror : lessonCellMirrors) {
-			sb.append(CommonUtils.convertLessonCell(cellMirror, today, detailed)).append('\n');
+			if (!map.containsKey(cellMirror.getColumnPosition())) {
+				map.put(cellMirror.getColumnPosition(), new HashSet<>());
+			}
+			map.get(cellMirror.getColumnPosition()).add(cellMirror);
+		}
+		List<Integer> order = new ArrayList<>(map.keySet());
+		order.sort(Comparator.naturalOrder());
+		for (Set<LessonCellMirror> cellMirror : order.stream().map(map::get).collect(Collectors.toList())) {
+			if (cellMirror.size() == 1) {
+				sb.append(CommonUtils.convertLessonCell(cellMirror.iterator().next(), today, detailed, showTeachers,
+						showGroups)).append('\n');
+			} else {
+				sb.append(CommonUtils.reduceLessonCells(cellMirror, today, detailed, showTeachers, showGroups))
+						.append('\n');
+			}
 		}
 		sb.append('\n');
 		return sb.toString();
@@ -60,51 +86,154 @@ public class CommonUtils {
 		return Character.toString(Character.toUpperCase(str.charAt(0)));
 	}
 
+	public static String reduceLessonCells(Collection<LessonCellMirror> mirrors, boolean today, boolean detailed,
+	                                       boolean showTeachers, boolean showGroups) {
+		Set<String> subjectNames = new LinkedHashSet<>();
+		Set<String> auditories = new LinkedHashSet<>();
+		Set<Pair<String, Integer>> groupsAndSubgroups = new LinkedHashSet<>();
+		Set<Pair<String, String>> teachers = new LinkedHashSet<>();
+		LocalTime start = null;
+		LocalTime end = null;
+		Integer columnPosition = null;
+		boolean crossPair = false;
+		for (LessonCellMirror mirror : mirrors) {
+			subjectNames.add(mirror.getFullSubjectName());
+			auditories.add(mirror.getAuditoryAddress());
+			groupsAndSubgroups.add(Pair.of(mirror.getGroup(), mirror.getSubgroup()));
+			teachers.add(Pair.of(mirror.getTeacherName(), mirror.getTeacherTitle()));
+			if (start == null) {
+				start = mirror.getStart();
+			} else if (start.isAfter(mirror.getStart())) {
+				start = mirror.getStart();
+			}
+			if (end == null) {
+				end = mirror.getEnd();
+			} else if (end.isBefore(mirror.getEnd())) {
+				end = mirror.getEnd();
+			}
+			if (columnPosition == null) {
+				columnPosition = mirror.getColumnPosition();
+			} else if (!columnPosition.equals(mirror.getColumnPosition())) {
+				throw new IllegalArgumentException("Provided cells with different positions: "
+						+ columnPosition + " and " + mirror.getColumnPosition());
+			}
+			crossPair = crossPair | mirror.getCrossPair();
+		}
+		LessonCellView lessonCellView = new LessonCellView(new ArrayList<>(subjectNames), new ArrayList<>(teachers),
+				new ArrayList<>(groupsAndSubgroups), new ArrayList<>(auditories), columnPosition,
+				crossPair, start, end);
+		return convertLessonView(lessonCellView, today, detailed, showTeachers, showGroups);
+	}
+
 	public static String convertLessonCell(LessonCellMirror mirror, boolean today, boolean detailed) {
-		boolean subgroup = mirror.getSubgroup() != 0;
-		String out = emojifyDigit(mirror.getColumnPosition() + 1);
+		return convertLessonCell(mirror, today, detailed, true, false);
+	}
+
+	public static String convertLessonCell(LessonCellMirror mirror, boolean today, boolean detailed,
+	                                       boolean showTeachers, boolean showGroups) {
+		LessonCellView lessonCellView = new LessonCellView(
+				Collections.singletonList(mirror.getFullSubjectName()),
+				Collections.singletonList(Pair.of(mirror.getTeacherName(), mirror.getTeacherTitle())),
+				Collections.singletonList(Pair.of(mirror.getGroup(), mirror.getSubgroup())),
+				Collections.singletonList(mirror.getAuditoryAddress()),
+				mirror.getColumnPosition(), mirror.getCrossPair(), mirror.getStart(),
+				mirror.getEnd()
+		);
+		return convertLessonView(lessonCellView, today, detailed, showTeachers, showGroups);
+	}
+
+	private static String convertLessonView(LessonCellView view, boolean today, boolean detailed,
+	                                        boolean showTeachers, boolean showGroups) {
+		boolean subgroup = view.getGroupsAndSubgroups().size() == 1 &&
+				view.getGroupsAndSubgroups().get(0).getSecond() != 0;
+		StringBuilder out = new StringBuilder(emojifyDigit(view.getColumnPosition() + 1));
 		if (today) {
 			LocalTime localTime = LocalTime.now();
-			if (mirror.getStart().isBefore(localTime) && mirror.getEnd().isAfter(localTime)) { // live lesson
-				out += LIVE_LESSON_EMOJI;
-			} else if (mirror.getStart().isAfter(localTime)) { // not yet live
-				out += FUTURE_LESSON_EMOJI;
+			if (view.getStart().isBefore(localTime) && view.getEnd().isAfter(localTime)) { // live lesson
+				out.append(LIVE_LESSON_EMOJI);
+			} else if (view.getStart().isAfter(localTime)) { // not yet live
+				out.append(FUTURE_LESSON_EMOJI);
 			} else { // already passed
-				out += PAST_LESSON_EMOJI;
+				out.append(PAST_LESSON_EMOJI);
 			}
 		}
-		out += String.format(" (%s - %s) %s, ",
-				mirror.getStart().format(DateTimeFormatter.ofPattern("HH:mm")),
-				mirror.getEnd().format(DateTimeFormatter.ofPattern("HH:mm")),
-				mirror.getFullSubjectName());
-		if (!detailed && mirror.getTeacherName() != null) {
-			String[] fullTeacherName = mirror.getTeacherName().split(" ");
-			for (int i = 1; i < fullTeacherName.length; i++) {
-				fullTeacherName[i] = findFirstCapitalLetter(fullTeacherName[i]);
+		out.append(String.format(" (%s - %s) ",
+				view.getStart().format(DateTimeFormatter.ofPattern("HH:mm")),
+				view.getEnd().format(DateTimeFormatter.ofPattern("HH:mm"))));
+		out.append(view.getSubjectNames().stream().map(name -> name + ", ").collect(Collectors.joining()));
+		if (!detailed && showTeachers && view.getTeachersNames().size() != 0) {
+			for (Pair<String, String> pair : view.getTeachersNames()) {
+				String teacherName = pair.getFirst();
+				String[] fullTeacherName = teacherName.split(" ");
+				for (int i = 1; i < fullTeacherName.length; i++) {
+					fullTeacherName[i] = findFirstCapitalLetter(fullTeacherName[i]);
+				}
+				StringBuilder sb = new StringBuilder();
+				for (int i = 0; i < fullTeacherName.length; i++) {
+					sb.append(fullTeacherName[i]);
+					if (i != 0) {
+						sb.append('.');
+					} else {
+						sb.append(' ');
+					}
+				}
+				out.append(String.format("%s, ", sb.toString()));
 			}
-			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < fullTeacherName.length; i++) {
-				sb.append(fullTeacherName[i]);
-				if (i != 0) {
-					sb.append('.');
+		}
+		if (view.getAuditories().size() != 0) {
+			for (String auditoryAddress : view.getAuditories()) {
+				String building = auditoryAddress.split("\\|")[0];
+				String auditory = auditoryAddress.split("\\|")[1];
+				out.append(String.format("ауд.%s, к.%s ",
+						auditory, building));
+			}
+		}
+		out.append(subgroup ? " " + SINGLE_SUBGROUP_EMOJI : "") // is subgroup separated from another
+				.append(view.isCrossPair() ? " " + CROSS_PAIR_EMOJI : ""); // is cross-pair
+		if (detailed && showTeachers && view.getTeachersNames().size() != 0) {
+//			out.append(String.format("\n" + TEACHER_EMOJI + " %s %s\n",
+//					mirror.getTeacherTitle(), mirror.getTeacherName()));
+			out.append('\n').append(TEACHER_EMOJI).append(' ');
+			for (Pair<String, String> pair : view.getTeachersNames()) {
+				out.append(pair.getSecond()).append(", ").append(pair.getFirst()).append("; ");
+			}
+		}
+		if (showGroups) {
+			out.append('\n').append(GROUPS_EMOJI).append(' ');
+			boolean first = true;
+			for (Pair<String, Integer> pair : view.getGroupsAndSubgroups()) {
+				if (first) {
+					first = false;
 				} else {
-					sb.append(' ');
+					out.append(", ");
+				}
+				out.append(pair.getFirst());
+				if (pair.getSecond() != 0) {
+					out.append(",п.").append(pair.getSecond());
 				}
 			}
-			out += String.format("%s, ", sb.toString());
 		}
-		if (mirror.getAuditoryAddress() != null) {
-			String building = mirror.getAuditoryAddress().split("\\|")[0];
-			String auditory = mirror.getAuditoryAddress().split("\\|")[1];
-			out += String.format("ауд.%s, к.%s",
-					auditory, building);
-		}
-		out += (subgroup ? " " + SINGLE_SUBGROUP_EMOJI : "") // is subgroup separated from another subgroup
-				+ (mirror.getCrossPair() ? " " + CROSS_PAIR_EMOJI : ""); // is cross-pair
-		if (detailed && mirror.getTeacherName() != null) {
-			out += String.format("\n" + TEACHER_EMOJI + " %s %s\n",
-					mirror.getTeacherTitle(), mirror.getTeacherName());
-		}
-		return out;
+		return out.toString();
+	}
+
+	@Data
+	@AllArgsConstructor
+	private static class LessonCellView {
+		private List<String> subjectNames;
+
+		// first - name, second - title
+		private List<Pair<String, String>> teachersNames;
+
+		private List<Pair<String, Integer>> groupsAndSubgroups;
+
+		private List<String> auditories;
+
+		private Integer columnPosition;
+
+		private boolean crossPair;
+
+		private LocalTime start;
+
+		private LocalTime end;
 	}
 }

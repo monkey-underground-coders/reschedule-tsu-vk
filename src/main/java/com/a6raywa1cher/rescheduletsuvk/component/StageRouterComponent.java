@@ -9,6 +9,7 @@ import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
 import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
+import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,8 +52,9 @@ public class StageRouterComponent {
 				.execute();
 	}
 
-	public void link(Integer peerId, Stage stage) {
-		hardlinkMap.put(peerId, stage);
+	// true if new link
+	public boolean link(Integer peerId, Stage stage) {
+		return hardlinkMap.put(peerId, stage) == null;
 	}
 
 	public void unlink(Integer peerId) {
@@ -65,6 +67,7 @@ public class StageRouterComponent {
 			try {
 				handler.run();
 			} catch (Exception e) {
+				Sentry.capture(e);
 				log.error("Listening error", e);
 			}
 		}

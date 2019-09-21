@@ -36,6 +36,7 @@ public class MainMenuStage implements Stage {
 	private static final String GET_TODAY_LESSONS = "Какие сегодня пары?";
 	private static final String GET_TOMORROW_LESSONS = "Какие пары завтра (или в ПН)?";
 	private static final String GET_NEXT_LESSON = "Какая следующая пара?";
+	private static final String GET_TEACHER_LESSONS = "Расписание преподавателя";
 	private static final String DROP_SETTINGS = "Изменить группу";
 	private static final String GET_INFO = "Информация";
 	private static final Logger log = LoggerFactory.getLogger(MainMenuStage.class);
@@ -55,16 +56,17 @@ public class MainMenuStage implements Stage {
 		this.service = service;
 	}
 
-	private String getDefaultKeyboard() {
+	public static String getDefaultKeyboard() {
 		ObjectMapper objectMapper = new ObjectMapper();
 		String basicPayload = objectMapper.createObjectNode()
 				.put(ROUTE, NAME)
 				.toString();
-		return VkUtils.createKeyboard(false, new int[]{1, 1, 1, 1, 2},
+		return VkUtils.createKeyboard(false, new int[]{1, 1, 1, 1, 1, 2},
 				new VkKeyboardButton(VkKeyboardButton.Color.PRIMARY, GET_SEVEN_DAYS, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_TODAY_LESSONS, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_NEXT_LESSON, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_TOMORROW_LESSONS, basicPayload),
+				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_TEACHER_LESSONS, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, DROP_SETTINGS, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_INFO, basicPayload)
 		);
@@ -210,6 +212,10 @@ public class MainMenuStage implements Stage {
 						SINGLE_SUBGROUP_EMOJI + " - пара только у одной из подгрупп.", getDefaultKeyboard());
 	}
 
+	private void getTeacherLessons(ExtendedMessage message) {
+		stageRouterComponent.routeMessage(message, FindTeacherStage.NAME);
+	}
+
 	@Override
 	public void accept(ExtendedMessage message) {
 		Optional<UserInfo> optionalUserInfo = service.getById(message.getUserId());
@@ -233,6 +239,9 @@ public class MainMenuStage implements Stage {
 					break;
 				case DROP_SETTINGS:
 					dropSettings(optionalUserInfo.get(), message);
+					break;
+				case GET_TEACHER_LESSONS:
+					getTeacherLessons(message);
 					break;
 				case GET_INFO:
 				default:

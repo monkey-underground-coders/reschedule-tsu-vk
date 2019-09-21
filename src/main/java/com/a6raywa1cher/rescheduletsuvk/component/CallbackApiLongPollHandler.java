@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.vk.api.sdk.callback.longpoll.CallbackApiLongPoll;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
+import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +29,7 @@ public class CallbackApiLongPollHandler extends CallbackApiLongPoll {
 			component.routeMessage(gson.fromJson(info, ExtendedMessage.class));
 			return true;
 		} catch (Exception e) {
+			Sentry.capture(e);
 			log.error("Parse exception", e);
 			return super.parse(json);
 		}

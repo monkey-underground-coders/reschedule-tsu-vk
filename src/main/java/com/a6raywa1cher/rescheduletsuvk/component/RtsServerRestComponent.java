@@ -91,4 +91,12 @@ public class RtsServerRestComponent {
 	public CompletionStage<GetWeekSignResponse> getWeekSign(String facultyId) {
 		return request("faculties/" + encodeValue(facultyId) + "/week_sign", GetWeekSignResponse.class);
 	}
+
+	public CompletionStage<GetTeachersResponse> findTeacher(String teacherName) {
+		return request("teachers/find/" + encodeValue(teacherName), GetTeachersResponse.class);
+	}
+
+	public CompletionStage<GetScheduleOfTeacherForWeekResponse> getTeacherWeekSchedule(String teacherName) {
+		return request("teachers/" + encodeValue(teacherName) + "/week", GetScheduleOfTeacherForWeekResponse.class);
+	}
 }
