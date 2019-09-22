@@ -10,6 +10,7 @@ import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
+import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 import static com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent.ROUTE;
 import static com.a6raywa1cher.rescheduletsuvk.stages.FindTeacherStage.NAME;
 import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.ARROW_DOWN_EMOJI;
+import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.TEACHER_EMOJI;
 
 @Component(NAME)
 public class FindTeacherStage implements Stage {
@@ -83,6 +85,7 @@ public class FindTeacherStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("Find teacher error\n" + message.toString() + "\n", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}
@@ -94,7 +97,7 @@ public class FindTeacherStage implements Stage {
 		}
 		restComponent.getTeacherWeekSchedule(teacherName)
 				.thenAccept(response -> {
-					StringBuilder sb = new StringBuilder();
+					StringBuilder sb = new StringBuilder(TEACHER_EMOJI + ' ' + teacherName + '\n');
 					boolean today = response.getSchedules().get(0).getDayOfWeek() == LocalDate.now().getDayOfWeek();
 					for (GetScheduleOfTeacherForWeekResponse.Schedule schedule : response.getSchedules()) {
 						sb.append(CommonUtils.convertLessonCells(schedule.getDayOfWeek(), schedule.getSign(),
@@ -107,6 +110,7 @@ public class FindTeacherStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("Get teacher schedule error\n" + message.toString() + "\n", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}

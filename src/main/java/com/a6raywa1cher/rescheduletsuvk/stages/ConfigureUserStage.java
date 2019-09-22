@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
+import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,6 +73,7 @@ public class ConfigureUserStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("step 1 error", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}
@@ -105,6 +107,7 @@ public class ConfigureUserStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("step 2 error", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}
@@ -140,6 +143,7 @@ public class ConfigureUserStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("step 3 error", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}
@@ -181,6 +185,7 @@ public class ConfigureUserStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("step 4 error", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}
@@ -295,6 +300,7 @@ public class ConfigureUserStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("step 5 error", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}

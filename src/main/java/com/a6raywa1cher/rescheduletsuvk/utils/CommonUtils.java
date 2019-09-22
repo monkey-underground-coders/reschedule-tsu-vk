@@ -98,9 +98,10 @@ public class CommonUtils {
 		boolean crossPair = false;
 		for (LessonCellMirror mirror : mirrors) {
 			subjectNames.add(mirror.getFullSubjectName());
-			auditories.add(mirror.getAuditoryAddress());
+			if (mirror.getAuditoryAddress() != null) auditories.add(mirror.getAuditoryAddress());
 			groupsAndSubgroups.add(Pair.of(mirror.getGroup(), mirror.getSubgroup()));
-			teachers.add(Pair.of(mirror.getTeacherName(), mirror.getTeacherTitle()));
+			if (mirror.getTeacherName() != null)
+				teachers.add(Pair.of(mirror.getTeacherName(), mirror.getTeacherTitle()));
 			if (start == null) {
 				start = mirror.getStart();
 			} else if (start.isAfter(mirror.getStart())) {
@@ -133,9 +134,11 @@ public class CommonUtils {
 	                                       boolean showTeachers, boolean showGroups) {
 		LessonCellView lessonCellView = new LessonCellView(
 				Collections.singletonList(mirror.getFullSubjectName()),
-				Collections.singletonList(Pair.of(mirror.getTeacherName(), mirror.getTeacherTitle())),
+				(mirror.getTeacherName() == null) ? Collections.emptyList() :
+						Collections.singletonList(Pair.of(mirror.getTeacherName(), mirror.getTeacherTitle())),
 				Collections.singletonList(Pair.of(mirror.getGroup(), mirror.getSubgroup())),
-				Collections.singletonList(mirror.getAuditoryAddress()),
+				(mirror.getAuditoryAddress() == null) ? Collections.emptyList() :
+						Collections.singletonList(mirror.getAuditoryAddress()),
 				mirror.getColumnPosition(), mirror.getCrossPair(), mirror.getStart(),
 				mirror.getEnd()
 		);

@@ -14,6 +14,7 @@ import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
+import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,6 +90,7 @@ public class MainMenuStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("Get seven days error\n" + message.toString() + "\n", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}
@@ -117,6 +119,7 @@ public class MainMenuStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("Get today lessons error\n" + extendedMessage.toString() + "\n", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}
@@ -145,6 +148,7 @@ public class MainMenuStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("Get next lesson error\n" + extendedMessage.toString() + "\n", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}
@@ -193,6 +197,7 @@ public class MainMenuStage implements Stage {
 				})
 				.exceptionally(e -> {
 					log.error("Get tomorrow lessons error\n" + extendedMessage.toString() + "\n", e);
+					Sentry.capture(e);
 					return null;
 				});
 	}
