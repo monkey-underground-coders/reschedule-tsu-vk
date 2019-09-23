@@ -38,6 +38,7 @@ public class MainMenuStage implements Stage {
 	private static final String GET_TOMORROW_LESSONS = "Какие пары завтра (или в ПН)?";
 	private static final String GET_NEXT_LESSON = "Какая следующая пара?";
 	private static final String GET_TEACHER_LESSONS = "Расписание преподавателя";
+	private static final String GET_RAW_SCHEDULE = "Недельное расписание";
 	private static final String DROP_SETTINGS = "Изменить группу";
 	private static final String GET_INFO = "Информация";
 	private static final Logger log = LoggerFactory.getLogger(MainMenuStage.class);
@@ -62,12 +63,13 @@ public class MainMenuStage implements Stage {
 		String basicPayload = objectMapper.createObjectNode()
 				.put(ROUTE, NAME)
 				.toString();
-		return VkUtils.createKeyboard(false, new int[]{1, 1, 1, 1, 1, 2},
+		return VkUtils.createKeyboard(false, new int[]{1, 1, 1, 1, 2, 2},
 				new VkKeyboardButton(VkKeyboardButton.Color.PRIMARY, GET_SEVEN_DAYS, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_TODAY_LESSONS, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_NEXT_LESSON, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_TOMORROW_LESSONS, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_TEACHER_LESSONS, basicPayload),
+				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_RAW_SCHEDULE, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, DROP_SETTINGS, basicPayload),
 				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_INFO, basicPayload)
 		);
@@ -202,6 +204,10 @@ public class MainMenuStage implements Stage {
 				});
 	}
 
+	private void getRawSchedule(ExtendedMessage message) {
+		stageRouterComponent.routeMessage(message, RawScheduleStage.NAME);
+	}
+
 	private void dropSettings(UserInfo userInfo, ExtendedMessage message) {
 		service.delete(userInfo);
 		stageRouterComponent.routeMessage(message, WelcomeStage.NAME);
@@ -247,6 +253,9 @@ public class MainMenuStage implements Stage {
 					break;
 				case GET_TEACHER_LESSONS:
 					getTeacherLessons(message);
+					break;
+				case GET_RAW_SCHEDULE:
+					getRawSchedule(message);
 					break;
 				case GET_INFO:
 				default:
