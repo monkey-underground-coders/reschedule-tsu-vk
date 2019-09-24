@@ -5,6 +5,7 @@ import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
+import com.a6raywa1cher.rescheduletsuvk.config.AppConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.dao.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
@@ -41,15 +42,17 @@ public class ConfigureUserStage implements Stage {
 	private Map<Integer, Integer> step;
 	private UserInfoService service;
 	private StageRouterComponent component;
+	private AppConfigProperties properties;
 
 	@Autowired
 	public ConfigureUserStage(VkApiClient vk, GroupActor groupActor, RtsServerRestComponent restComponent,
-	                          UserInfoService service, StageRouterComponent component) {
+	                          UserInfoService service, StageRouterComponent component, AppConfigProperties properties) {
 		this.vk = vk;
 		this.groupActor = groupActor;
 		this.restComponent = restComponent;
 		this.service = service;
 		this.component = component;
+		this.properties = properties;
 		this.step = new HashMap<>();
 	}
 
@@ -60,14 +63,18 @@ public class ConfigureUserStage implements Stage {
 					List<VkKeyboardButton> buttons = new ArrayList<>();
 					ObjectMapper objectMapper = new ObjectMapper();
 					for (String facultyId : response.getFaculties()) {
-						buttons.add(new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, facultyId,
+						boolean red = properties.getRedFaculties().contains(facultyId);
+						buttons.add(new VkKeyboardButton(
+								red ? VkKeyboardButton.Color.NEGATIVE : VkKeyboardButton.Color.SECONDARY,
+								facultyId,
 								objectMapper.createObjectNode()
 										.put("button", "1")
 										.put(ROUTE, NAME)
 										.toString()));
 					}
 					VkUtils.sendMessage(vk, groupActor, message.getUserId(),
-							ARROW_DOWN_EMOJI + "Выбери свой, если он присутствует" + ARROW_DOWN_EMOJI,
+							"Если факультет - красный, то, возможно, у него некорректное расписание\n" +
+									ARROW_DOWN_EMOJI + "Выбери свой, если он присутствует" + ARROW_DOWN_EMOJI,
 							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
 					step.put(peerId, 2);
 				})

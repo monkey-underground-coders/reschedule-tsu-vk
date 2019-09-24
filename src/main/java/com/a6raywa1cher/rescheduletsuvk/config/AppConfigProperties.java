@@ -9,6 +9,8 @@ import org.springframework.validation.annotation.Validated;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.util.HashSet;
+import java.util.Set;
 
 @Component
 @ConfigurationProperties(prefix = "app")
@@ -23,4 +25,6 @@ public class AppConfigProperties {
 	@URL
 	@NotBlank
 	private String rtsUrl;
+
+	private Set<String> redFaculties = new HashSet<>();
 }

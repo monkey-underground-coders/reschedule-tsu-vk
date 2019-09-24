@@ -187,7 +187,7 @@ public class CommonUtils {
 			for (String auditoryAddress : view.getAuditories()) {
 				String building = auditoryAddress.split("\\|")[0];
 				String auditory = auditoryAddress.split("\\|")[1];
-				out.append(String.format("ауд.%s, к.%s ",
+				out.append(String.format("ауд.%s, к.%s, ",
 						auditory, building));
 			}
 		}
