@@ -6,8 +6,10 @@ import com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.config.AppConfigProperties;
-import com.a6raywa1cher.rescheduletsuvk.dao.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
+import com.a6raywa1cher.rescheduletsuvk.services.interfaces.FacultyService;
+import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
+import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
 import com.a6raywa1cher.rescheduletsuvk.utils.VkKeyboardButton;
 import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
@@ -20,7 +22,6 @@ import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import java.time.format.TextStyle;
@@ -43,35 +44,42 @@ public class ConfigureUserStage implements Stage {
 	private UserInfoService service;
 	private StageRouterComponent component;
 	private AppConfigProperties properties;
+	private ScheduleService scheduleService;
+	private FacultyService facultyService;
 
 	@Autowired
 	public ConfigureUserStage(VkApiClient vk, GroupActor groupActor, RtsServerRestComponent restComponent,
-	                          UserInfoService service, StageRouterComponent component, AppConfigProperties properties) {
+	                          UserInfoService service, StageRouterComponent component, AppConfigProperties properties,
+	                          ScheduleService scheduleService, FacultyService facultyService) {
 		this.vk = vk;
 		this.groupActor = groupActor;
 		this.restComponent = restComponent;
 		this.service = service;
 		this.component = component;
 		this.properties = properties;
+		this.scheduleService = scheduleService;
+		this.facultyService = facultyService;
 		this.step = new HashMap<>();
 	}
 
 	private void step1(ExtendedMessage message) {
 		Integer peerId = message.getUserId();
-		restComponent.getFaculties()
+		facultyService.getFacultiesList()
 				.thenAccept(response -> {
 					List<VkKeyboardButton> buttons = new ArrayList<>();
 					ObjectMapper objectMapper = new ObjectMapper();
-					for (String facultyId : response.getFaculties()) {
-						boolean red = properties.getRedFaculties().contains(facultyId);
-						buttons.add(new VkKeyboardButton(
-								red ? VkKeyboardButton.Color.NEGATIVE : VkKeyboardButton.Color.SECONDARY,
-								facultyId,
-								objectMapper.createObjectNode()
-										.put("button", "1")
-										.put(ROUTE, NAME)
-										.toString()));
-					}
+					response.stream()
+							.sorted()
+							.forEach(facultyId -> {
+								boolean red = properties.getRedFaculties().contains(facultyId);
+								buttons.add(new VkKeyboardButton(
+										red ? VkKeyboardButton.Color.NEGATIVE : VkKeyboardButton.Color.SECONDARY,
+										facultyId,
+										objectMapper.createObjectNode()
+												.put("button", "1")
+												.put(ROUTE, NAME)
+												.toString()));
+							});
 					VkUtils.sendMessage(vk, groupActor, message.getUserId(),
 							"Если факультет - красный, то, возможно, у него некорректное расписание\n" +
 									ARROW_DOWN_EMOJI + "Выбери свой, если он присутствует" + ARROW_DOWN_EMOJI,
@@ -95,10 +103,10 @@ public class ConfigureUserStage implements Stage {
 		UserInfo userInfo = new UserInfo();
 		userInfo.setPeerId(peerId);
 		userInfo.setFacultyId(facultyId);
-		restComponent.getGroups(facultyId)
+		facultyService.getGroupsList(facultyId)
 				.thenAccept(response -> {
 					ObjectMapper objectMapper = new ObjectMapper();
-					List<VkKeyboardButton> buttons = response.getGroups().stream()
+					List<VkKeyboardButton> buttons = response.stream()
 							.map(GetGroupsResponse.GroupInfo::getLevel)
 							.distinct()
 							.sorted()
@@ -129,9 +137,9 @@ public class ConfigureUserStage implements Stage {
 		String level = message.getBody();
 		JsonNode info = objectMapper.readTree(message.getPayload());
 		String facultyId = info.get("building").get("facultyId").asText();
-		restComponent.getGroups(facultyId)
+		facultyService.getGroupsList(facultyId)
 				.thenAccept(response -> {
-					List<VkKeyboardButton> buttons = response.getGroups().stream()
+					List<VkKeyboardButton> buttons = response.stream()
 							.filter(gi -> gi.getLevel().equals(level))
 							.map(GetGroupsResponse.GroupInfo::getCourse)
 							.distinct()
@@ -166,9 +174,9 @@ public class ConfigureUserStage implements Stage {
 		JsonNode payload = objectMapper.readTree(message.getPayload());
 		String facultyId = payload.get("building").get("facultyId").asText();
 		String level = payload.get("level").asText();
-		restComponent.getGroups(facultyId)
+		facultyService.getGroupsList(facultyId)
 				.thenAccept(response -> {
-					List<VkKeyboardButton> buttons = response.getGroups().stream()
+					List<VkKeyboardButton> buttons = response.stream()
 							.filter(gi -> gi.getLevel().equals(level))
 							.filter(gi -> gi.getCourse().equals(Integer.parseInt(course)))
 							.map(GetGroupsResponse.GroupInfo::getName)
@@ -207,98 +215,43 @@ public class ConfigureUserStage implements Stage {
 		JsonNode payload = objectMapper.readTree(message.getPayload());
 		String facultyId = payload.get("building").get("facultyId").asText();
 		String groupId = payload.get("groupName").asText();
-		restComponent.getGroups(facultyId)
+		facultyService.getGroupsList(facultyId)
 				.thenCompose(response -> {
-					Optional<GetGroupsResponse.GroupInfo> optionalGroupInfo = response.getGroups().stream()
+					Optional<GetGroupsResponse.GroupInfo> optionalGroupInfo = response.stream()
 							.filter(gi -> gi.getName().equals(groupId)).findAny();
 					if (optionalGroupInfo.isEmpty()) {
 						step1(message);
 						return CompletableFuture.completedFuture(null);
 					}
 					if (optionalGroupInfo.get().getSubgroups() > 0) {
-						return restComponent.getRawSchedule(facultyId, optionalGroupInfo.get().getName())
-								.thenAccept(schedule -> {
-									// find situation (no lesson) - (lesson)
-									LessonCellMirror firstSituation = null;
-									// find situation (lesson1) - (lesson2)
-									Pair<LessonCellMirror, LessonCellMirror> secondSituation = null;
-									for (LessonCellMirror mirror : schedule) {
-										if (mirror.getSubgroup() == 0) continue;
-										boolean found = false;
-										for (LessonCellMirror second : schedule) {
-											if (second.getSubgroup() == 0) continue;
-											if (mirror.getWeekSign() == second.getWeekSign() &&
-													mirror.getDayOfWeek().equals(second.getDayOfWeek()) &&
-													mirror.getColumnPosition().equals(second.getColumnPosition()) &&
-													!mirror.getSubgroup().equals(second.getSubgroup())
-											) {
-												if (secondSituation == null) {
-													secondSituation = Pair.of(mirror, second);
-												}
-												found = true;
-												break;
-											}
-										}
-										if (!found) {
-											firstSituation = mirror;
-											break;
-										}
-									}
-									if (firstSituation != null) {
-										VkUtils.sendMessage(vk, groupActor, message.getUserId(),
-												"Упс, не последний. Известно, что у этой группы есть подгруппы.\n" +
-														"Есть ли у тебя вот эта пара (у другой группы в эту пару окно)?\n" +
-														String.format("%s (%s)",
-																firstSituation.getDayOfWeek().getDisplayName(TextStyle.FULL,
-																		Locale.forLanguageTag("ru-RU")),
-																firstSituation.getWeekSign().getPrettyString()) +
-														CommonUtils.convertLessonCell(firstSituation, false, true),
-												VkUtils.createKeyboard(true,
-														new VkKeyboardButton(VkKeyboardButton.Color.POSITIVE, "Да",
-																objectMapper.createObjectNode()
-																		.put(ROUTE, NAME)
-																		.put("subgroup", firstSituation.getSubgroup())
-																		.put("groupId", groupId)
-																		.put("facultyId", facultyId)
-																		.toString()),
-														new VkKeyboardButton(VkKeyboardButton.Color.NEGATIVE, "Нет",
-																objectMapper.createObjectNode()
-																		.put(ROUTE, NAME)
-																		.put("subgroup", 1 + (firstSituation.getSubgroup() % 2))
-																		.put("groupId", groupId)
-																		.put("facultyId", facultyId)
-																		.toString()))
-										);
-									} else if (secondSituation != null) {
-										LessonCellMirror mirror1 = secondSituation.getFirst();
-										LessonCellMirror mirror2 = secondSituation.getSecond();
-										VkUtils.sendMessage(vk, groupActor, message.getUserId(),
-												"Упс, не последний. Известно, что у этой группы есть подгруппы.\n" +
-														"Есть ли у тебя вот эта пара?\n" +
-														String.format("%s (%s)",
-																mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
-																		Locale.forLanguageTag("ru-RU")),
-																mirror1.getWeekSign().getPrettyString()) +
-														CommonUtils.convertLessonCell(mirror1, false, true),
-												VkUtils.createKeyboard(true,
-														new VkKeyboardButton(VkKeyboardButton.Color.POSITIVE, "Да",
-																objectMapper.createObjectNode()
-																		.put(ROUTE, NAME)
-																		.put("subgroup", mirror1.getSubgroup())
-																		.put("groupId", groupId)
-																		.put("facultyId", facultyId)
-																		.toString()),
-														new VkKeyboardButton(VkKeyboardButton.Color.NEGATIVE, "Нет",
-																objectMapper.createObjectNode()
-																		.put(ROUTE, NAME)
-																		.put("subgroup", mirror2.getSubgroup())
-																		.put("groupId", groupId)
-																		.put("facultyId", facultyId)
-																		.toString()))
-										);
-									} else {
-										throw new RuntimeException();
-									}
+						return scheduleService.findDifferenceBetweenSubgroups(facultyId, optionalGroupInfo.get().getName())
+								.thenAccept(diff -> {
+									LessonCellMirror mirror1 = diff.getFirst();
+									LessonCellMirror mirror2 = diff.getSecond();
+									VkUtils.sendMessage(vk, groupActor, message.getUserId(),
+											"Упс, не последний. Известно, что у этой группы есть подгруппы.\n" +
+													"Есть ли у тебя вот эта пара?" + (mirror2 != null ? "" : "(у другой подгруппы окно)") + "\n" +
+													String.format("%s (%s)",
+															mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
+																	Locale.forLanguageTag("ru-RU")),
+															mirror1.getWeekSign().getPrettyString()) +
+													CommonUtils.convertLessonCell(mirror1, false, true),
+											VkUtils.createKeyboard(true,
+													new VkKeyboardButton(VkKeyboardButton.Color.POSITIVE, "Да",
+															objectMapper.createObjectNode()
+																	.put(ROUTE, NAME)
+																	.put("subgroup", diff.getFirstSubgroup())
+																	.put("groupId", groupId)
+																	.put("facultyId", facultyId)
+																	.toString()),
+													new VkKeyboardButton(VkKeyboardButton.Color.NEGATIVE, "Нет",
+															objectMapper.createObjectNode()
+																	.put(ROUTE, NAME)
+																	.put("subgroup", diff.getSecondSubgroup())
+																	.put("groupId", groupId)
+																	.put("facultyId", facultyId)
+																	.toString()))
+									);
 									step.put(message.getUserId(), 6);
 								});
 					} else {

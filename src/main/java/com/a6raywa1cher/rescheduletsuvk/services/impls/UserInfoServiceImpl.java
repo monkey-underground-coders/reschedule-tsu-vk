@@ -1,8 +1,8 @@
-package com.a6raywa1cher.rescheduletsuvk.dao.impl;
+package com.a6raywa1cher.rescheduletsuvk.services.impls;
 
-import com.a6raywa1cher.rescheduletsuvk.dao.interfaces.UserInfoService;
-import com.a6raywa1cher.rescheduletsuvk.dao.repository.UserInfoRepository;
+import com.a6raywa1cher.rescheduletsuvk.dao.UserInfoRepository;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
+import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

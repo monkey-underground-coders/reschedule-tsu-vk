@@ -1,6 +1,6 @@
 package com.a6raywa1cher.rescheduletsuvk.component;
 
-import com.a6raywa1cher.rescheduletsuvk.globalstages.GlobalListeningStage;
+import com.a6raywa1cher.rescheduletsuvk.globalstages.FilterStage;
 import com.a6raywa1cher.rescheduletsuvk.stages.PrimaryStage;
 import com.a6raywa1cher.rescheduletsuvk.stages.Stage;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -20,6 +20,8 @@ import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 @Component
 public class StageRouterComponent {
@@ -27,15 +29,16 @@ public class StageRouterComponent {
 	private static final Logger log = LoggerFactory.getLogger(StageRouterComponent.class);
 	private final Map<String, ? extends Stage> stageMap;
 	private final Map<Integer, Stage> hardlinkMap;
-	private final List<? extends GlobalListeningStage> globalListeners;
+	private final List<? extends FilterStage> globalListeners;
 	private final PrimaryStage primaryStage;
 	private final VkApiClient vk;
 	private final GroupActor groupActor;
+	private final Executor executor;
 
 	@Autowired
 	public StageRouterComponent(VkApiClient vk, GroupActor groupActor,
 	                            @Lazy Map<String, ? extends Stage> stageMap,
-	                            @Lazy List<? extends GlobalListeningStage> globalListeners,
+	                            @Lazy List<? extends FilterStage> globalListeners,
 	                            @Lazy PrimaryStage primaryStage) {
 		this.stageMap = stageMap;
 		this.globalListeners = globalListeners;
@@ -43,6 +46,7 @@ public class StageRouterComponent {
 		this.vk = vk;
 		this.groupActor = groupActor;
 		this.hardlinkMap = new ConcurrentHashMap<>();
+		executor = new ForkJoinPool();
 	}
 
 	@PostConstruct
@@ -82,10 +86,16 @@ public class StageRouterComponent {
 	}
 
 	public void routeMessage(ExtendedMessage message) {
-		for (GlobalListeningStage globalListeningStage : globalListeners) {
-			if (globalListeningStage.process(message)) {
+		executor.execute(() -> $routeMessage(message));
+	}
+
+	private void $routeMessage(ExtendedMessage message) {
+		int userId = message.getUserId();
+		for (FilterStage filterStage : globalListeners) {
+			message = filterStage.process(message);
+			if (message == null) {
 				log.info("Global listener {} stopped processing of {}'s message",
-						globalListeningStage.getClass().toString(), message.getUserId());
+						filterStage.getClass().toString(), userId);
 				return;
 			}
 		}
@@ -93,16 +103,16 @@ public class StageRouterComponent {
 			ObjectMapper objectMapper = new ObjectMapper();
 			try {
 				JsonNode jsonNode = objectMapper.readTree(message.getPayload());
-				log.debug("Routing user {} message with payload to " + jsonNode.get(ROUTE).asText(), message.getUserId());
+				log.debug("Routing user {} message with payload to " + jsonNode.get(ROUTE).asText(), userId);
 				stageMap.get(jsonNode.get(ROUTE).asText()).accept(message);
 			} catch (Exception e) {
-				log.debug("Failover routing user {} to primaryStage", message.getUserId());
+				log.debug("Failover routing user {} to primaryStage", userId);
 				primaryStage.accept(message);
 			}
 		} else {
-			log.debug("Routing payload-blank message from {} to {}", message.getUserId(),
-					hardlinkMap.getOrDefault(message.getUserId(), primaryStage).getClass().getName());
-			hardlinkMap.getOrDefault(message.getUserId(), primaryStage).accept(message);
+			log.debug("Routing payload-blank message from {} to {}", userId,
+					hardlinkMap.getOrDefault(userId, primaryStage).getClass().getName());
+			hardlinkMap.getOrDefault(userId, primaryStage).accept(message);
 		}
 	}
 }

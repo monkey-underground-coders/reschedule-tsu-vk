@@ -103,6 +103,18 @@
             <artifactId>sentry</artifactId>
             <version>1.7.27</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.google.cloud/google-cloud-dialogflow -->
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-dialogflow</artifactId>
+            <version>0.110.0-alpha</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-oauth2-http</artifactId>
+            <version>0.11.0</version>
+        </dependency>
     </dependencies>
 
     <build>

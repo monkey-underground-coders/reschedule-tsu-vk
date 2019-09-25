@@ -1,4 +1,4 @@
-package com.a6raywa1cher.rescheduletsuvk.dao.interfaces;
+package com.a6raywa1cher.rescheduletsuvk.services.interfaces;
 
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 

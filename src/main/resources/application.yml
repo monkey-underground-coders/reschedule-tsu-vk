@@ -2,6 +2,7 @@ app:
   group-id: 0
   token: ---
   rts-url: ---
+  activate-dialogflow: false
 # ===============================
 # DB CONNECTION
 # ===============================

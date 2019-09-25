@@ -1,14 +1,11 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
-import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent;
-import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetScheduleForWeekResponse;
-import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
-import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
-import com.a6raywa1cher.rescheduletsuvk.dao.interfaces.UserInfoService;
+import com.a6raywa1cher.rescheduletsuvk.component.textquery.TextQueryProcessor;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
-import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
+import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
+import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.utils.VkKeyboardButton;
 import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,9 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent.ROUTE;
 import static com.a6raywa1cher.rescheduletsuvk.stages.MainMenuStage.NAME;
@@ -45,17 +40,19 @@ public class MainMenuStage implements Stage {
 	private VkApiClient vk;
 	private GroupActor group;
 	private StageRouterComponent stageRouterComponent;
-	private RtsServerRestComponent restComponent;
 	private UserInfoService service;
+	private ScheduleService scheduleService;
+	private TextQueryProcessor textQueryProcessor;
 
 	@Autowired
 	public MainMenuStage(VkApiClient vk, GroupActor group, StageRouterComponent stageRouterComponent,
-	                     RtsServerRestComponent restComponent, UserInfoService service) {
+	                     UserInfoService service, ScheduleService scheduleService, TextQueryProcessor textQueryProcessor) {
 		this.vk = vk;
 		this.group = group;
 		this.stageRouterComponent = stageRouterComponent;
-		this.restComponent = restComponent;
 		this.service = service;
+		this.scheduleService = scheduleService;
+		this.textQueryProcessor = textQueryProcessor;
 	}
 
 	public static String getDefaultKeyboard() {
@@ -76,19 +73,11 @@ public class MainMenuStage implements Stage {
 	}
 
 	private void getSevenDays(UserInfo userInfo, ExtendedMessage message) {
-		restComponent.getScheduleForWeek(userInfo.getFacultyId(), userInfo.getGroupId())
-				.thenAccept(response -> {
-					StringBuilder sb = new StringBuilder();
-					boolean today = response.getSchedules().get(0).getDayOfWeek() == LocalDate.now().getDayOfWeek();
-					for (GetScheduleForWeekResponse.Schedule schedule : response.getSchedules()) {
-						sb.append(CommonUtils.convertLessonCells(schedule.getDayOfWeek(), schedule.getSign(),
-								today, schedule.getCells().stream()
-										.filter(cell -> cell.getSubgroup() == 0 || cell.getSubgroup().equals(userInfo.getSubgroup()))
-										.collect(Collectors.toList()), false));
-						today = false;
-					}
+		scheduleService.getScheduleForSevenDays(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(),
+				LocalDate.now())
+				.thenAccept(schedule -> {
 					VkUtils.sendMessage(vk, group, message.getUserId(),
-							sb.toString(), getDefaultKeyboard());
+							schedule, getDefaultKeyboard());
 				})
 				.exceptionally(e -> {
 					log.error("Get seven days error\n" + message.toString() + "\n", e);
@@ -98,26 +87,17 @@ public class MainMenuStage implements Stage {
 	}
 
 	private void getTodayLessons(UserInfo userInfo, ExtendedMessage extendedMessage) {
-		restComponent.getRawSchedule(userInfo.getFacultyId(), userInfo.getGroupId())
-				.thenCombine(restComponent.getWeekSign(userInfo.getFacultyId()), (list, weekSignResult) -> {
-					LocalDate localDate = LocalDate.now();
-					List<LessonCellMirror> todayLessons = list.stream()
-							.filter(cell -> cell.getDayOfWeek().equals(localDate.getDayOfWeek()))
-							.filter(cell -> cell.getWeekSign().equals(WeekSign.ANY) ||
-									cell.getWeekSign().equals(weekSignResult.getWeekSign()))
-							.filter(cell -> cell.getSubgroup() == 0 || cell.getSubgroup().equals(userInfo.getSubgroup()))
-							.collect(Collectors.toList());
-					if (todayLessons.isEmpty()) {
+		scheduleService.getScheduleFor(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), LocalDate.now(), true)
+				.thenAccept(optional -> {
+					if (optional.isEmpty()) {
 						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
 								"Сегодня нет пар! Отдыхай, студент",
 								getDefaultKeyboard());
 					} else {
 						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
-								CommonUtils.convertLessonCells(localDate.getDayOfWeek(),
-										weekSignResult.getWeekSign(), true, todayLessons, true),
+								optional.get(),
 								getDefaultKeyboard());
 					}
-					return null;
 				})
 				.exceptionally(e -> {
 					log.error("Get today lessons error\n" + extendedMessage.toString() + "\n", e);
@@ -127,26 +107,17 @@ public class MainMenuStage implements Stage {
 	}
 
 	private void getNextLesson(UserInfo userInfo, ExtendedMessage extendedMessage) {
-		restComponent.getRawSchedule(userInfo.getFacultyId(), userInfo.getGroupId())
-				.thenCombine(restComponent.getWeekSign(userInfo.getFacultyId()), (list, weekSignResult) -> {
-					LocalDateTime localDateTime = LocalDateTime.now();
-					Optional<LessonCellMirror> nextLesson = list.stream()
-							.filter(cell -> cell.getDayOfWeek().equals(localDateTime.getDayOfWeek()))
-							.filter(cell -> cell.getWeekSign().equals(WeekSign.ANY) ||
-									cell.getWeekSign().equals(weekSignResult.getWeekSign()))
-							.filter(cell -> cell.getStart().isAfter(localDateTime.toLocalTime()))
-							.filter(cell -> cell.getSubgroup() == 0 || cell.getSubgroup().equals(userInfo.getSubgroup()))
-							.findFirst();
-					if (nextLesson.isEmpty()) {
+		scheduleService.getNextLesson(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), LocalDateTime.now())
+				.thenAccept(optional -> {
+					if (optional.isEmpty()) {
 						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
 								"Больше сегодня пар не ожидается",
 								getDefaultKeyboard());
 					} else {
 						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
-								CommonUtils.convertLessonCell(nextLesson.get(), true, true),
+								optional.get(),
 								getDefaultKeyboard());
 					}
-					return null;
 				})
 				.exceptionally(e -> {
 					log.error("Get next lesson error\n" + extendedMessage.toString() + "\n", e);
@@ -156,52 +127,43 @@ public class MainMenuStage implements Stage {
 	}
 
 	private void getTomorrowLessons(UserInfo userInfo, ExtendedMessage extendedMessage) {
-		restComponent.getRawSchedule(userInfo.getFacultyId(), userInfo.getGroupId())
-				.thenCombine(restComponent.getWeekSign(userInfo.getFacultyId()), (list, weekSignResult) -> {
-					LocalDate now = LocalDate.now();
-					WeekSign weekSign = weekSignResult.getWeekSign();
-					boolean isDayAfterTomorrow = false;
-					LocalDate localDate;
-					switch (now.getDayOfWeek()) {
-						case SATURDAY:
-							localDate = now.plusDays(2);
-							weekSign = WeekSign.inverse(weekSign);
-							isDayAfterTomorrow = true;
-							break;
-						case SUNDAY:
-							localDate = now.plusDays(1);
-							weekSign = WeekSign.inverse(weekSign);
-							break;
-						default:
-							localDate = now.plusDays(1);
-							break;
-					}
-					LocalDate finalLocalDate = localDate;
-					WeekSign finalWeekSign = weekSign;
-					List<LessonCellMirror> todayLessons = list.stream()
-							.filter(cell -> cell.getDayOfWeek().equals(finalLocalDate.getDayOfWeek()))
-							.filter(cell -> cell.getWeekSign().equals(WeekSign.ANY) ||
-									cell.getWeekSign().equals(finalWeekSign))
-							.filter(cell -> cell.getSubgroup() == 0 || cell.getSubgroup().equals(userInfo.getSubgroup()))
-							.collect(Collectors.toList());
-					if (todayLessons.isEmpty()) {
+		LocalDate now = LocalDate.now();
+		boolean isDayAfterTomorrow = false;
+		LocalDate localDate;
+		switch (now.getDayOfWeek()) {
+			case SATURDAY:
+				localDate = now.plusDays(2);
+				isDayAfterTomorrow = true;
+				break;
+			case SUNDAY:
+			default:
+				localDate = now.plusDays(1);
+				break;
+		}
+		LocalDate finalLocalDate = localDate;
+		boolean finalIsDayAfterTomorrow = isDayAfterTomorrow;
+		scheduleService.getScheduleFor(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), finalLocalDate, false)
+				.thenAccept(optional -> {
+					if (optional.isEmpty()) {
 						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
-								isDayAfterTomorrow ? "Послезавтра нет пар! Отдыхай, студент" :
+								finalIsDayAfterTomorrow ? "Послезавтра нет пар! Отдыхай, студент" :
 										"Завтра нет пар! Отдыхай, студент",
 								getDefaultKeyboard());
 					} else {
 						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
-								CommonUtils.convertLessonCells(finalLocalDate.getDayOfWeek(),
-										finalWeekSign, false, todayLessons, true),
+								optional.get(),
 								getDefaultKeyboard());
 					}
-					return null;
 				})
 				.exceptionally(e -> {
 					log.error("Get tomorrow lessons error\n" + extendedMessage.toString() + "\n", e);
 					Sentry.capture(e);
 					return null;
 				});
+	}
+
+	private boolean textQuery(UserInfo userInfo, ExtendedMessage extendedMessage) {
+		return textQueryProcessor.process(userInfo, extendedMessage);
 	}
 
 	private void getRawSchedule(ExtendedMessage message) {
@@ -261,6 +223,8 @@ public class MainMenuStage implements Stage {
 				default:
 					greeting(optionalUserInfo.get(), message);
 			}
-		} else greeting(optionalUserInfo.get(), message);
+		} else if (!textQuery(optionalUserInfo.get(), message)) {
+			greeting(optionalUserInfo.get(), message);
+		}
 	}
 }

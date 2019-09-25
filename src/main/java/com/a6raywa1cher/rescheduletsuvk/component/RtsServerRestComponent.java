@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -77,6 +79,12 @@ public class RtsServerRestComponent {
 				GetScheduleForWeekResponse.class);
 	}
 
+	public CompletionStage<GetScheduleForWeekResponse> getScheduleForWeek(String facultyId, String groupId, LocalDate date) {
+		return request("faculties/" + encodeValue(facultyId) + "/groups/" + encodeValue(groupId) + "/week" +
+						"?day=" + date.format(DateTimeFormatter.ISO_DATE),
+				GetScheduleForWeekResponse.class);
+	}
+
 	public CompletionStage<GetGroupsResponse> getGroups(String facultyId) {
 		return request("faculties/" + encodeValue(facultyId) + "/groups", GetGroupsResponse.class);
 	}
@@ -90,6 +98,11 @@ public class RtsServerRestComponent {
 
 	public CompletionStage<GetWeekSignResponse> getWeekSign(String facultyId) {
 		return request("faculties/" + encodeValue(facultyId) + "/week_sign", GetWeekSignResponse.class);
+	}
+
+	public CompletionStage<GetWeekSignResponse> getWeekSign(String facultyId, LocalDate localDate) {
+		return request("faculties/" + encodeValue(facultyId) + "/week_sign?day="
+				+ localDate.format(DateTimeFormatter.ISO_DATE), GetWeekSignResponse.class);
 	}
 
 	public CompletionStage<GetTeachersResponse> findTeacher(String teacherName) {

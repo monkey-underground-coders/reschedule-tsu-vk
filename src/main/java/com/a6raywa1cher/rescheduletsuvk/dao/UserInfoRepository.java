@@ -1,4 +1,4 @@
-package com.a6raywa1cher.rescheduletsuvk.dao.repository;
+package com.a6raywa1cher.rescheduletsuvk.dao;
 
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import org.springframework.data.repository.CrudRepository;

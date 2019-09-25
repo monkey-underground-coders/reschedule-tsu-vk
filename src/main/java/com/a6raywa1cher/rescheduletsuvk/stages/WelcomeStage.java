@@ -2,7 +2,7 @@ package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent;
-import com.a6raywa1cher.rescheduletsuvk.dao.interfaces.UserInfoService;
+import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;

@@ -9,26 +9,26 @@ import org.springframework.boot.info.BuildProperties;
 import org.springframework.stereotype.Service;
 
 @Service
-public class InfoGlobalListeningStage implements GlobalListeningStage {
+public class InfoFilterStage implements FilterStage {
 	private final VkApiClient vk;
 	private final GroupActor group;
 	private final BuildProperties buildProperties;
 
 	@Autowired
-	public InfoGlobalListeningStage(VkApiClient vk, GroupActor group, BuildProperties buildProperties) {
+	public InfoFilterStage(VkApiClient vk, GroupActor group, BuildProperties buildProperties) {
 		this.vk = vk;
 		this.group = group;
 		this.buildProperties = buildProperties;
 	}
 
 	@Override
-	public boolean process(ExtendedMessage extendedMessage) {
+	public ExtendedMessage process(ExtendedMessage extendedMessage) {
 		if (extendedMessage.getBody().equals("!Версия")) {
 			VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
 					"Версия: " + buildProperties.getVersion() + ", время сборки: " +
 							buildProperties.getTime().toString(), ""
 			);
 		}
-		return false;
+		return extendedMessage;
 	}
 }

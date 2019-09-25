@@ -30,9 +30,10 @@ build/
 ### VS Code ###
 .vscode/
 
-application-dev.yml
-application-staging.yml
-application-prod.yml
+/src/main/resources/application-dev.yml
+/src/main/resources/application-staging.yml
+/src/main/resources/application-prod.yml
 logs
 deploy-staging.sh
-sentry.properties
+/src/main/resources/sentry.properties
+/src/main/resources/googlecredentials.json
