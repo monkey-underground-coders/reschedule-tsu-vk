@@ -1,4 +1,4 @@
-package com.a6raywa1cher.rescheduletsuvk.globalstages;
+package com.a6raywa1cher.rescheduletsuvk.filterstages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 

@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.util.concurrent.CompletionStage;
 
 import static com.a6raywa1cher.rescheduletsuvk.stages.MainMenuStage.getDefaultKeyboard;
+import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.GROUPS_EMOJI;
 
 @Component
 public class DefaultTextQueryExecutor implements TextQueryExecutor {
@@ -46,8 +47,11 @@ public class DefaultTextQueryExecutor implements TextQueryExecutor {
 						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
 								"Пары не найдены", getDefaultKeyboard());
 					} else {
+						String prepared = GROUPS_EMOJI + ' ' +
+								findGroup.toCompletableFuture().getNow(null).getName() + ' ' +
+								response.get();
 						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
-								response.get(), getDefaultKeyboard());
+								prepared, getDefaultKeyboard());
 					}
 				})
 				.exceptionally(e -> {

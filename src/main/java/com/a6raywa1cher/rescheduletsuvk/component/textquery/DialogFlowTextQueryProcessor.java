@@ -33,7 +33,7 @@ public class DialogFlowTextQueryProcessor implements TextQueryProcessor {
 		try (SessionsClient sessionsClient = SessionsClient.create(sessionsSettings)) {
 			// Set the session name using the sessionId (UUID) and projectID (my-project-id)
 			SessionName session = SessionName.of(projectId, sessionId);
-			System.out.println("Session Path: " + session.toString());
+			log.debug("Session Path: " + session.toString());
 
 			// Set the text (hello) and language code (en-US) for the query
 			TextInput.Builder textInput = TextInput.newBuilder().setText(text).setLanguageCode(languageCode);
@@ -69,6 +69,8 @@ public class DialogFlowTextQueryProcessor implements TextQueryProcessor {
 	@Override
 	public boolean process(UserInfo userInfo, ExtendedMessage extendedMessage) {
 		try {
+			if (extendedMessage.getBody() == null || extendedMessage.getBody().isBlank() ||
+					extendedMessage.getBody().length() > 250) return false;
 			QueryResult queryResult = detectIntentTexts(extendedMessage.getBody(),
 					Integer.toString(extendedMessage.getUserId()), "ru-RU");
 			switch (queryResult.getIntent().getDisplayName()) {

@@ -1,7 +1,6 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
-import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
@@ -16,17 +15,26 @@ import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import java.time.format.TextStyle;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent.ROUTE;
@@ -36,11 +44,13 @@ import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.ARROW_DOWN_EMOJ
 @Component(NAME)
 public class ConfigureUserStage implements Stage {
 	public static final String NAME = "configureUserStage";
+	public static final String FACULTY_REGEX = "[а-яА-Я, \\-0-9]{3,50}";
+	public static final String GROUP_REGEX = "[а-яА-Я, \\-0-9'.]{3,150}";
+	public static final String COURSE_REGEX = "[1-7]";
 	private static final Logger log = LoggerFactory.getLogger(ConfigureUserStage.class);
 	private VkApiClient vk;
 	private GroupActor groupActor;
-	private RtsServerRestComponent restComponent;
-	private Map<Integer, Integer> step;
+	private LoadingCache<Integer, Pair<UserInfo, Integer>> userInfoLoadingCache;
 	private UserInfoService service;
 	private StageRouterComponent component;
 	private AppConfigProperties properties;
@@ -48,21 +58,29 @@ public class ConfigureUserStage implements Stage {
 	private FacultyService facultyService;
 
 	@Autowired
-	public ConfigureUserStage(VkApiClient vk, GroupActor groupActor, RtsServerRestComponent restComponent,
-	                          UserInfoService service, StageRouterComponent component, AppConfigProperties properties,
+	public ConfigureUserStage(VkApiClient vk, GroupActor groupActor, UserInfoService service,
+	                          StageRouterComponent component, AppConfigProperties properties,
 	                          ScheduleService scheduleService, FacultyService facultyService) {
 		this.vk = vk;
 		this.groupActor = groupActor;
-		this.restComponent = restComponent;
 		this.service = service;
 		this.component = component;
 		this.properties = properties;
 		this.scheduleService = scheduleService;
 		this.facultyService = facultyService;
-		this.step = new HashMap<>();
+		this.userInfoLoadingCache = CacheBuilder.newBuilder()
+				.expireAfterAccess(1, TimeUnit.HOURS)
+				.build(new CacheLoader<>() {
+					@Override
+					public Pair<UserInfo, Integer> load(Integer integer) throws Exception {
+						UserInfo userInfo = new UserInfo();
+						userInfo.setPeerId(integer);
+						return Pair.of(userInfo, 1);
+					}
+				});
 	}
 
-	private void step1(ExtendedMessage message) {
+	private void step1(ExtendedMessage message, UserInfo userInfo) {
 		Integer peerId = message.getUserId();
 		facultyService.getFacultiesList()
 				.thenAccept(response -> {
@@ -84,7 +102,7 @@ public class ConfigureUserStage implements Stage {
 							"Если факультет - красный, то, возможно, у него некорректное расписание\n" +
 									ARROW_DOWN_EMOJI + "Выбери свой, если он присутствует" + ARROW_DOWN_EMOJI,
 							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
-					step.put(peerId, 2);
+					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 2));
 				})
 				.exceptionally(e -> {
 					log.error("step 1 error", e);
@@ -93,32 +111,33 @@ public class ConfigureUserStage implements Stage {
 				});
 	}
 
-	private void step2(ExtendedMessage message) {
+	private void step2(ExtendedMessage message, UserInfo userInfo) {
 		Integer peerId = message.getUserId();
-		if (message.getPayload() == null) {
-			step.put(peerId, 1);
+		String facultyId = message.getBody();
+		if (facultyId == null || !facultyId.matches(FACULTY_REGEX)) {
+			returnToFirstStep(message);
 			return;
 		}
-		String facultyId = message.getBody();
-		UserInfo userInfo = new UserInfo();
-		userInfo.setPeerId(peerId);
-		userInfo.setFacultyId(facultyId);
 		facultyService.getGroupsList(facultyId)
 				.thenAccept(response -> {
+					if (response.isEmpty()) {
+						returnToFirstStep(message);
+						return;
+					}
 					ObjectMapper objectMapper = new ObjectMapper();
+					userInfo.setFacultyId(facultyId);
 					List<VkKeyboardButton> buttons = response.stream()
 							.map(GetGroupsResponse.GroupInfo::getLevel)
 							.distinct()
 							.sorted()
 							.map(level -> new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, level, objectMapper.createObjectNode()
 									.put(ROUTE, NAME)
-									.set("building", objectMapper.valueToTree(userInfo))
 									.toString()))
 							.collect(Collectors.toList());
 					VkUtils.sendMessage(vk, groupActor, message.getUserId(),
 							ARROW_DOWN_EMOJI + "Хорошо, теперь выбери, где ты учишься" + ARROW_DOWN_EMOJI,
 							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
-					step.put(peerId, 3);
+					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 3));
 				})
 				.exceptionally(e -> {
 					log.error("step 2 error", e);
@@ -127,17 +146,15 @@ public class ConfigureUserStage implements Stage {
 				});
 	}
 
-	private void step3(ExtendedMessage message) throws JsonProcessingException {
+	private void step3(ExtendedMessage message, UserInfo userInfo) {
 		Integer peerId = message.getUserId();
-		if (message.getPayload() == null) {
-			step.put(peerId, 1);
-			return;
-		}
 		ObjectMapper objectMapper = new ObjectMapper();
 		String level = message.getBody();
-		JsonNode info = objectMapper.readTree(message.getPayload());
-		String facultyId = info.get("building").get("facultyId").asText();
-		facultyService.getGroupsList(facultyId)
+		if (level == null || (!level.equals("Бакалавриат | Специалитет") && !level.equals("Магистратура"))) {
+			returnToFirstStep(message);
+			return;
+		}
+		facultyService.getGroupsList(userInfo.getFacultyId())
 				.thenAccept(response -> {
 					List<VkKeyboardButton> buttons = response.stream()
 							.filter(gi -> gi.getLevel().equals(level))
@@ -148,13 +165,12 @@ public class ConfigureUserStage implements Stage {
 									Integer.toString(course), objectMapper.createObjectNode()
 									.put(ROUTE, NAME)
 									.put("level", level)
-									.set("building", info.get("building"))
 									.toString()))
 							.collect(Collectors.toList());
 					VkUtils.sendMessage(vk, groupActor, message.getUserId(),
 							ARROW_DOWN_EMOJI + "Окей, теперь курс?" + ARROW_DOWN_EMOJI,
 							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
-					step.put(peerId, 4);
+					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 4));
 				})
 				.exceptionally(e -> {
 					log.error("step 3 error", e);
@@ -163,18 +179,18 @@ public class ConfigureUserStage implements Stage {
 				});
 	}
 
-	private void step4(ExtendedMessage message) throws JsonProcessingException {
+	private void step4(ExtendedMessage message, UserInfo userInfo) throws JsonProcessingException {
 		Integer peerId = message.getUserId();
-		if (message.getPayload() == null) {
-			step.put(peerId, 1);
-			return;
-		}
 		ObjectMapper objectMapper = new ObjectMapper();
 		String course = message.getBody();
 		JsonNode payload = objectMapper.readTree(message.getPayload());
-		String facultyId = payload.get("building").get("facultyId").asText();
 		String level = payload.get("level").asText();
-		facultyService.getGroupsList(facultyId)
+		if (course == null || !course.matches(COURSE_REGEX) || level == null ||
+				(!level.equals("Бакалавриат | Специалитет") && !level.equals("Магистратура"))) {
+			returnToFirstStep(message);
+			return;
+		}
+		facultyService.getGroupsList(userInfo.getFacultyId())
 				.thenAccept(response -> {
 					List<VkKeyboardButton> buttons = response.stream()
 							.filter(gi -> gi.getLevel().equals(level))
@@ -187,16 +203,13 @@ public class ConfigureUserStage implements Stage {
 											groupName.substring(groupName.length() - 15) : groupName,
 									objectMapper.createObjectNode()
 											.put(ROUTE, NAME)
-											.put("level", level)
-											.put("course", course)
 											.put("groupName", groupName)
-											.set("building", payload.get("building"))
 											.toString()))
 							.collect(Collectors.toList());
 					VkUtils.sendMessage(vk, groupActor, message.getUserId(),
 							ARROW_DOWN_EMOJI + "Прекрасно, последний шаг. Твоя группа?" + ARROW_DOWN_EMOJI,
 							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
-					step.put(peerId, 5);
+					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 5));
 				})
 				.exceptionally(e -> {
 					log.error("step 4 error", e);
@@ -205,24 +218,25 @@ public class ConfigureUserStage implements Stage {
 				});
 	}
 
-	private void step5(ExtendedMessage message) throws JsonProcessingException {
+	private void step5(ExtendedMessage message, UserInfo userInfo) throws JsonProcessingException {
 		Integer peerId = message.getUserId();
-		if (message.getPayload() == null) {
-			step.put(peerId, 1);
-			return;
-		}
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode payload = objectMapper.readTree(message.getPayload());
-		String facultyId = payload.get("building").get("facultyId").asText();
 		String groupId = payload.get("groupName").asText();
+		String facultyId = userInfo.getFacultyId();
+		if (groupId == null || !groupId.matches(GROUP_REGEX)) {
+			returnToFirstStep(message);
+			return;
+		}
 		facultyService.getGroupsList(facultyId)
 				.thenCompose(response -> {
 					Optional<GetGroupsResponse.GroupInfo> optionalGroupInfo = response.stream()
 							.filter(gi -> gi.getName().equals(groupId)).findAny();
 					if (optionalGroupInfo.isEmpty()) {
-						step1(message);
+						returnToFirstStep(message);
 						return CompletableFuture.completedFuture(null);
 					}
+					userInfo.setGroupId(groupId);
 					if (optionalGroupInfo.get().getSubgroups() > 0) {
 						return scheduleService.findDifferenceBetweenSubgroups(facultyId, optionalGroupInfo.get().getName())
 								.thenAccept(diff -> {
@@ -241,21 +255,17 @@ public class ConfigureUserStage implements Stage {
 															objectMapper.createObjectNode()
 																	.put(ROUTE, NAME)
 																	.put("subgroup", diff.getFirstSubgroup())
-																	.put("groupId", groupId)
-																	.put("facultyId", facultyId)
 																	.toString()),
 													new VkKeyboardButton(VkKeyboardButton.Color.NEGATIVE, "Нет",
 															objectMapper.createObjectNode()
 																	.put(ROUTE, NAME)
 																	.put("subgroup", diff.getSecondSubgroup())
-																	.put("groupId", groupId)
-																	.put("facultyId", facultyId)
 																	.toString()))
 									);
-									step.put(message.getUserId(), 6);
+									userInfoLoadingCache.put(peerId, Pair.of(userInfo, 6));
 								});
 					} else {
-						registerUser(message, message.getUserId(), facultyId, groupId);
+						registerUser(message, userInfo);
 						return CompletableFuture.completedFuture(null);
 					}
 				})
@@ -266,66 +276,64 @@ public class ConfigureUserStage implements Stage {
 				});
 	}
 
-	private void step6(ExtendedMessage message) throws JsonProcessingException {
-		Integer peerId = message.getUserId();
-		if (message.getPayload() == null) {
-			step.put(peerId, 1);
-			return;
-		}
+	private void step6(ExtendedMessage message, UserInfo userInfo) throws JsonProcessingException {
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode jsonNode = objectMapper.readTree(message.getPayload());
 		int subgroup = jsonNode.get("subgroup").asInt();
 		VkUtils.sendMessage(vk, groupActor, message.getUserId(),
 				"Твоя подгруппа:" + subgroup);
-		String groupId = jsonNode.get("groupId").asText();
-		String facultyId = jsonNode.get("facultyId").asText();
-		registerUser(message, message.getUserId(), facultyId, groupId, subgroup);
-	}
-
-	private void registerUser(ExtendedMessage message, Integer peerId, String facultyId, String groupId) {
-		registerUser(message, peerId, facultyId, groupId, null);
-	}
-
-	private void registerUser(ExtendedMessage message, Integer peerId, String facultyId, String groupId, Integer subgroup) {
-		UserInfo userInfo = new UserInfo();
-		userInfo.setPeerId(peerId);
-		userInfo.setFacultyId(facultyId);
-		userInfo.setGroupId(groupId);
 		userInfo.setSubgroup(subgroup);
+		registerUser(message, userInfo);
+	}
+
+	private void registerUser(ExtendedMessage message, UserInfo userInfo) {
 		service.save(userInfo);
-		VkUtils.sendMessage(vk, groupActor, peerId, "Всё настроено!");
-		step.remove(peerId);
+		log.info("Registered user {} with faculty {}, group {} and subgroup {}", message.getUserId(), userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup());
+		VkUtils.sendMessage(vk, groupActor, message.getUserId(), "Всё настроено!");
+		userInfoLoadingCache.invalidate(message.getUserId());
 		component.routeMessage(message, MainMenuStage.NAME);
+	}
+
+	private void returnToFirstStep(ExtendedMessage message) {
+		userInfoLoadingCache.invalidate(message.getUserId());
+		accept(message);
 	}
 
 	@Override
 	public void accept(ExtendedMessage message) {
 		Integer peerId = message.getUserId();
-		if (message.getPayload() == null) step.put(peerId, 1);
-		step.putIfAbsent(peerId, 1);
+		if (message.getPayload() == null) {
+			userInfoLoadingCache.invalidate(peerId);
+		}
 		try {
-			switch (step.get(peerId)) {
+			Pair<UserInfo, Integer> pair = userInfoLoadingCache.get(peerId);
+			UserInfo userInfo = pair.getFirst();
+			int step = pair.getSecond();
+			switch (step) {
 				case 1:
-					step1(message);
+					step1(message, userInfo);
 					break;
 				case 2:
-					step2(message);
+					step2(message, userInfo);
 					break;
 				case 3:
-					step3(message);
+					step3(message, userInfo);
 					break;
 				case 4:
-					step4(message);
+					step4(message, userInfo);
 					break;
 				case 5:
-					step5(message);
+					step5(message, userInfo);
 					break;
 				case 6:
-					step6(message);
+					step6(message, userInfo);
 					break;
 			}
-		} catch (JsonProcessingException e) {
-			step1(message);
+		} catch (JsonProcessingException | ExecutionException e) {
+			userInfoLoadingCache.invalidate(peerId);
+			UserInfo userInfo = new UserInfo();
+			userInfo.setPeerId(message.getUserId());
+			step1(message, userInfo);
 		}
 	}
 }

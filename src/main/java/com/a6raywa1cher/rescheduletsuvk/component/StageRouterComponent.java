@@ -1,6 +1,6 @@
 package com.a6raywa1cher.rescheduletsuvk.component;
 
-import com.a6raywa1cher.rescheduletsuvk.globalstages.FilterStage;
+import com.a6raywa1cher.rescheduletsuvk.filterstages.FilterStage;
 import com.a6raywa1cher.rescheduletsuvk.stages.PrimaryStage;
 import com.a6raywa1cher.rescheduletsuvk.stages.Stage;
 import com.fasterxml.jackson.databind.JsonNode;
