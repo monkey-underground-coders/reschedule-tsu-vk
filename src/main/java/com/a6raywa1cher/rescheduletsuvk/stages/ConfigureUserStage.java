@@ -45,7 +45,7 @@ import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.ARROW_DOWN_EMOJ
 public class ConfigureUserStage implements Stage {
 	public static final String NAME = "configureUserStage";
 	public static final String FACULTY_REGEX = "[а-яА-Я, \\-0-9]{3,50}";
-	public static final String GROUP_REGEX = "[а-яА-Я, \\-0-9'.]{3,150}";
+	public static final String GROUP_REGEX = "[а-яА-Я, \\-0-9'.]{1,150}";
 	public static final String COURSE_REGEX = "[1-7]";
 	private static final Logger log = LoggerFactory.getLogger(ConfigureUserStage.class);
 	private VkApiClient vk;

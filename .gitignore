@@ -35,5 +35,6 @@ build/
 /src/main/resources/application-prod.yml
 logs
 deploy-staging.sh
+deploy-prod.sh
 /src/main/resources/sentry.properties
 /src/main/resources/googlecredentials.json
