@@ -64,6 +64,7 @@ public class FindTeacherStage implements Stage {
 		if (!message.getBody().matches(TEACHER_NAME_REGEX)) {
 			VkUtils.sendMessage(vk, group, message.getUserId(), "Некорректное имя преподавателя");
 			returnToMainMenu(message, false);
+			return;
 		}
 		restComponent.findTeacher(message.getBody())
 				.thenAccept(response -> {
@@ -94,6 +95,7 @@ public class FindTeacherStage implements Stage {
 		if (!message.getBody().matches(TEACHER_NAME_REGEX)) {
 			VkUtils.sendMessage(vk, group, message.getUserId(), "Некорректное имя преподавателя");
 			returnToMainMenu(message, false);
+			return;
 		}
 		restComponent.getTeacherWeekSchedule(teacherName)
 				.thenAccept(response -> {
