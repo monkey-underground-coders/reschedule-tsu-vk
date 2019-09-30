@@ -135,7 +135,8 @@ public class CommonUtils {
 		LessonCellView lessonCellView = new LessonCellView(
 				Collections.singletonList(mirror.getFullSubjectName()),
 				(mirror.getTeacherName() == null) ? Collections.emptyList() :
-						Collections.singletonList(Pair.of(mirror.getTeacherName(), mirror.getTeacherTitle())),
+						Collections.singletonList(Pair.of(mirror.getTeacherName(),
+								mirror.getTeacherTitle() == null ? "" : mirror.getTeacherTitle())),
 				Collections.singletonList(Pair.of(mirror.getGroup(), mirror.getSubgroup())),
 				(mirror.getAuditoryAddress() == null) ? Collections.emptyList() :
 						Collections.singletonList(mirror.getAuditoryAddress()),
