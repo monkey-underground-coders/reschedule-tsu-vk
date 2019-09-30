@@ -62,8 +62,7 @@ public class FindTeacherStage implements Stage {
 
 	private void step2(ExtendedMessage message) {
 		if (!message.getBody().matches(TEACHER_NAME_REGEX)) {
-			VkUtils.sendMessage(vk, group, message.getUserId(), "Некорректное имя преподавателя");
-			returnToMainMenu(message, false);
+			VkUtils.sendMessage(vk, group, message.getUserId(), "Некорректное имя преподавателя", getKeyboard());
 			return;
 		}
 		restComponent.findTeacher(message.getBody())
@@ -93,8 +92,7 @@ public class FindTeacherStage implements Stage {
 
 	private void step3(ExtendedMessage message, String teacherName) {
 		if (!message.getBody().matches(TEACHER_NAME_REGEX)) {
-			VkUtils.sendMessage(vk, group, message.getUserId(), "Некорректное имя преподавателя");
-			returnToMainMenu(message, false);
+			VkUtils.sendMessage(vk, group, message.getUserId(), "Некорректное имя преподавателя", getKeyboard());
 			return;
 		}
 		restComponent.getTeacherWeekSchedule(teacherName)
