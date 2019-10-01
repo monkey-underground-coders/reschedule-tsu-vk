@@ -5,11 +5,10 @@ import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetScheduleOfTeacherForWeekResponse;
+import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
 import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vk.api.sdk.client.VkApiClient;
-import com.vk.api.sdk.client.actors.GroupActor;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
@@ -34,8 +34,8 @@ public class FindTeacherStage implements Stage {
 	private RtsServerRestComponent restComponent;
 
 	@Autowired
-	public FindTeacherStage(MessageRouter messageRouter, VkApiClient vk, GroupActor group,
-	                        MessageOutput messageOutput, RtsServerRestComponent restComponent) {
+	public FindTeacherStage(MessageRouter messageRouter, MessageOutput messageOutput,
+	                        RtsServerRestComponent restComponent) {
 		this.messageRouter = messageRouter;
 		this.messageOutput = messageOutput;
 		this.restComponent = restComponent;
@@ -74,9 +74,10 @@ public class FindTeacherStage implements Stage {
 						messageOutput.sendMessage(message.getUserId(),
 								"Слишком много преподавателей, уточни запрос", getKeyboard());
 					} else {
-						messageOutput.sendMessage(message.getUserId(), "Найдено несколько преподователей," +
+						messageOutput.sendMessage(message.getUserId(), "Найдено несколько преподователей, " +
 								"выбери нужного", messageOutput.createKeyboard(true,
 								response.getTeachers().stream()
+										.sorted()
 										.map(name -> new KeyboardButton(KeyboardButton.Color.SECONDARY, name))
 										.collect(Collectors.toList()).toArray(new KeyboardButton[]{})));
 					}
@@ -95,11 +96,18 @@ public class FindTeacherStage implements Stage {
 		}
 		restComponent.getTeacherWeekSchedule(teacherName)
 				.thenAccept(response -> {
-					StringBuilder sb = new StringBuilder(TEACHER_EMOJI + ' ' + teacherName + '\n');
+					Optional<LessonCellMirror> anyCell = response.getSchedules().stream()
+							.flatMap(schedule -> schedule.getCells().stream()).findFirst();
+					StringBuilder sb = new StringBuilder(TEACHER_EMOJI + ' ' + teacherName);
+					;
+					if (anyCell.isPresent() && anyCell.get().getTeacherTitle() != null) {
+						sb.append(", ").append(anyCell.get().getTeacherTitle());
+					}
+					sb.append('\n');
 					boolean today = response.getSchedules().get(0).getDayOfWeek() == LocalDate.now().getDayOfWeek();
 					for (GetScheduleOfTeacherForWeekResponse.Schedule schedule : response.getSchedules()) {
 						sb.append(CommonUtils.convertLessonCells(schedule.getDayOfWeek(), schedule.getSign(),
-								today, schedule.getCells(), false, false, true));
+								today, schedule.getCells(), false, false, true, true));
 						today = false;
 					}
 					messageOutput.sendMessage(message.getUserId(),
