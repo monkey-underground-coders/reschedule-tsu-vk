@@ -1,9 +1,7 @@
 package com.a6raywa1cher.rescheduletsuvk.filterstages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
-import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
-import com.vk.api.sdk.client.VkApiClient;
-import com.vk.api.sdk.client.actors.GroupActor;
+import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.vk.api.sdk.objects.messages.Message;
 import io.sentry.Sentry;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,19 +11,17 @@ import java.lang.reflect.Field;
 
 @Service
 public class EasterEggFilterStage implements FilterStage {
-	private final VkApiClient vk;
-	private final GroupActor group;
+	private MessageOutput messageOutput;
 
 	@Autowired
-	public EasterEggFilterStage(VkApiClient vk, GroupActor group) {
-		this.vk = vk;
-		this.group = group;
+	public EasterEggFilterStage(MessageOutput messageOutput) {
+		this.messageOutput = messageOutput;
 	}
 
 	@Override
 	public ExtendedMessage process(ExtendedMessage extendedMessage) {
 		if (extendedMessage.getBody().toLowerCase().strip().equals("спасибо")) {
-			VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
+			messageOutput.sendMessage(extendedMessage.getUserId(),
 					"Рад стараться :)");
 		}
 		if (extendedMessage.getBody().toLowerCase().strip().equals("солдис")) {

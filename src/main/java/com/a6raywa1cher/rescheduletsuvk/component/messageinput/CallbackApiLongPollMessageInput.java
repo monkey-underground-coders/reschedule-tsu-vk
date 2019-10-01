@@ -1,0 +1,55 @@
+package com.a6raywa1cher.rescheduletsuvk.component.messageinput;
+
+import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
+import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.vk.api.sdk.callback.longpoll.CallbackApiLongPoll;
+import com.vk.api.sdk.client.VkApiClient;
+import com.vk.api.sdk.client.actors.GroupActor;
+import com.vk.api.sdk.exceptions.ApiException;
+import com.vk.api.sdk.exceptions.ClientException;
+import io.sentry.Sentry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.PostConstruct;
+
+public class CallbackApiLongPollMessageInput extends CallbackApiLongPoll implements MessageInput {
+	private static final Logger log = LoggerFactory.getLogger(CallbackApiLongPollMessageInput.class);
+	private MessageRouter component;
+	private Gson gson;
+	private VkApiClient vk;
+	private GroupActor group;
+
+	public CallbackApiLongPollMessageInput(VkApiClient client, GroupActor actor, MessageRouter component,
+	                                       VkApiClient vk, GroupActor group) {
+		super(client, actor);
+		this.component = component;
+		this.vk = vk;
+		this.group = group;
+		this.gson = new Gson();
+	}
+
+	@PostConstruct
+	public void onStart() throws ClientException, ApiException {
+		vk.groups().setLongPollSettings(group).enabled(true)
+				.messageNew(true)
+				.execute();
+	}
+
+	@Override
+	public boolean parse(JsonObject json) {
+		try {
+			String type = json.get("type").getAsString();
+			if (!type.equals("message_new")) return super.parse(json);
+			String info = json.get("object").toString();
+			component.routeMessage(gson.fromJson(info, ExtendedMessage.class));
+			return true;
+		} catch (Exception e) {
+			Sentry.capture(e);
+			log.error("Parse exception", e);
+			return super.parse(json);
+		}
+	}
+}

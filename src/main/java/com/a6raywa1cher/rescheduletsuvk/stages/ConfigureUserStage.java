@@ -1,7 +1,8 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
-import com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent;
+import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
+import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.config.AppConfigProperties;
@@ -10,16 +11,13 @@ import com.a6raywa1cher.rescheduletsuvk.services.interfaces.FacultyService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
-import com.a6raywa1cher.rescheduletsuvk.utils.VkKeyboardButton;
-import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
+import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.vk.api.sdk.client.VkApiClient;
-import com.vk.api.sdk.client.actors.GroupActor;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +35,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent.ROUTE;
+import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
 import static com.a6raywa1cher.rescheduletsuvk.stages.ConfigureUserStage.NAME;
 import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.ARROW_DOWN_EMOJI;
 
@@ -48,23 +46,21 @@ public class ConfigureUserStage implements Stage {
 	public static final String GROUP_REGEX = "[а-яА-Я, \\-0-9'.(М)]{1,150}";
 	public static final String COURSE_REGEX = "[1-7]";
 	private static final Logger log = LoggerFactory.getLogger(ConfigureUserStage.class);
-	private VkApiClient vk;
-	private GroupActor groupActor;
+	private MessageOutput messageOutput;
 	private LoadingCache<Integer, Pair<UserInfo, Integer>> userInfoLoadingCache;
 	private UserInfoService service;
-	private StageRouterComponent component;
+	private MessageRouter messageRouter;
 	private AppConfigProperties properties;
 	private ScheduleService scheduleService;
 	private FacultyService facultyService;
 
 	@Autowired
-	public ConfigureUserStage(VkApiClient vk, GroupActor groupActor, UserInfoService service,
-	                          StageRouterComponent component, AppConfigProperties properties,
+	public ConfigureUserStage(MessageOutput messageOutput, UserInfoService service,
+	                          MessageRouter messageRouter, AppConfigProperties properties,
 	                          ScheduleService scheduleService, FacultyService facultyService) {
-		this.vk = vk;
-		this.groupActor = groupActor;
+		this.messageOutput = messageOutput;
 		this.service = service;
-		this.component = component;
+		this.messageRouter = messageRouter;
 		this.properties = properties;
 		this.scheduleService = scheduleService;
 		this.facultyService = facultyService;
@@ -84,24 +80,24 @@ public class ConfigureUserStage implements Stage {
 		Integer peerId = message.getUserId();
 		facultyService.getFacultiesList()
 				.thenAccept(response -> {
-					List<VkKeyboardButton> buttons = new ArrayList<>();
+					List<KeyboardButton> buttons = new ArrayList<>();
 					ObjectMapper objectMapper = new ObjectMapper();
 					response.stream()
 							.sorted()
 							.forEach(facultyId -> {
 								boolean red = properties.getRedFaculties().contains(facultyId);
-								buttons.add(new VkKeyboardButton(
-										red ? VkKeyboardButton.Color.NEGATIVE : VkKeyboardButton.Color.SECONDARY,
+								buttons.add(new KeyboardButton(
+										red ? KeyboardButton.Color.NEGATIVE : KeyboardButton.Color.SECONDARY,
 										facultyId,
 										objectMapper.createObjectNode()
 												.put("button", "1")
 												.put(ROUTE, NAME)
 												.toString()));
 							});
-					VkUtils.sendMessage(vk, groupActor, message.getUserId(),
+					messageOutput.sendMessage(message.getUserId(),
 							"Если факультет - красный, то, возможно, у него некорректное расписание\n" +
 									ARROW_DOWN_EMOJI + "Выбери свой, если он присутствует" + ARROW_DOWN_EMOJI,
-							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
+							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
 					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 2));
 				})
 				.exceptionally(e -> {
@@ -126,17 +122,17 @@ public class ConfigureUserStage implements Stage {
 					}
 					ObjectMapper objectMapper = new ObjectMapper();
 					userInfo.setFacultyId(facultyId);
-					List<VkKeyboardButton> buttons = response.stream()
+					List<KeyboardButton> buttons = response.stream()
 							.map(GetGroupsResponse.GroupInfo::getLevel)
 							.distinct()
 							.sorted()
-							.map(level -> new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, level, objectMapper.createObjectNode()
+							.map(level -> new KeyboardButton(KeyboardButton.Color.SECONDARY, level, objectMapper.createObjectNode()
 									.put(ROUTE, NAME)
 									.toString()))
 							.collect(Collectors.toList());
-					VkUtils.sendMessage(vk, groupActor, message.getUserId(),
+					messageOutput.sendMessage(message.getUserId(),
 							ARROW_DOWN_EMOJI + "Хорошо, теперь выбери, где ты учишься" + ARROW_DOWN_EMOJI,
-							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
+							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
 					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 3));
 				})
 				.exceptionally(e -> {
@@ -156,20 +152,20 @@ public class ConfigureUserStage implements Stage {
 		}
 		facultyService.getGroupsList(userInfo.getFacultyId())
 				.thenAccept(response -> {
-					List<VkKeyboardButton> buttons = response.stream()
+					List<KeyboardButton> buttons = response.stream()
 							.filter(gi -> gi.getLevel().equals(level))
 							.map(GetGroupsResponse.GroupInfo::getCourse)
 							.distinct()
 							.sorted()
-							.map(course -> new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY,
+							.map(course -> new KeyboardButton(KeyboardButton.Color.SECONDARY,
 									Integer.toString(course), objectMapper.createObjectNode()
 									.put(ROUTE, NAME)
 									.put("level", level)
 									.toString()))
 							.collect(Collectors.toList());
-					VkUtils.sendMessage(vk, groupActor, message.getUserId(),
+					messageOutput.sendMessage(message.getUserId(),
 							ARROW_DOWN_EMOJI + "Окей, теперь курс?" + ARROW_DOWN_EMOJI,
-							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
+							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
 					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 4));
 				})
 				.exceptionally(e -> {
@@ -192,13 +188,13 @@ public class ConfigureUserStage implements Stage {
 		}
 		facultyService.getGroupsList(userInfo.getFacultyId())
 				.thenAccept(response -> {
-					List<VkKeyboardButton> buttons = response.stream()
+					List<KeyboardButton> buttons = response.stream()
 							.filter(gi -> gi.getLevel().equals(level))
 							.filter(gi -> gi.getCourse().equals(Integer.parseInt(course)))
 							.map(GetGroupsResponse.GroupInfo::getName)
 							.distinct()
 							.sorted()
-							.map(groupName -> new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY,
+							.map(groupName -> new KeyboardButton(KeyboardButton.Color.SECONDARY,
 									groupName.length() >= 40 ? groupName.substring(0, 20) + "..." +
 											groupName.substring(groupName.length() - 15) : groupName,
 									objectMapper.createObjectNode()
@@ -206,9 +202,9 @@ public class ConfigureUserStage implements Stage {
 											.put("groupName", groupName)
 											.toString()))
 							.collect(Collectors.toList());
-					VkUtils.sendMessage(vk, groupActor, message.getUserId(),
+					messageOutput.sendMessage(message.getUserId(),
 							ARROW_DOWN_EMOJI + "Прекрасно, последний шаг. Твоя группа?" + ARROW_DOWN_EMOJI,
-							VkUtils.createKeyboard(true, buttons.toArray(new VkKeyboardButton[]{})));
+							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
 					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 5));
 				})
 				.exceptionally(e -> {
@@ -242,7 +238,7 @@ public class ConfigureUserStage implements Stage {
 								.thenAccept(diff -> {
 									LessonCellMirror mirror1 = diff.getFirst();
 									LessonCellMirror mirror2 = diff.getSecond();
-									VkUtils.sendMessage(vk, groupActor, message.getUserId(),
+									messageOutput.sendMessage(message.getUserId(),
 											"Упс, не последний. Известно, что у этой группы есть подгруппы.\n" +
 													"Есть ли у тебя вот эта пара?" + (mirror2 != null ? "" : "(у другой подгруппы окно)") + "\n" +
 													String.format("%s (%s)",
@@ -250,13 +246,13 @@ public class ConfigureUserStage implements Stage {
 																	Locale.forLanguageTag("ru-RU")),
 															mirror1.getWeekSign().getPrettyString()) +
 													CommonUtils.convertLessonCell(mirror1, false, true),
-											VkUtils.createKeyboard(true,
-													new VkKeyboardButton(VkKeyboardButton.Color.POSITIVE, "Да",
+											messageOutput.createKeyboard(true,
+													new KeyboardButton(KeyboardButton.Color.POSITIVE, "Да",
 															objectMapper.createObjectNode()
 																	.put(ROUTE, NAME)
 																	.put("subgroup", diff.getFirstSubgroup())
 																	.toString()),
-													new VkKeyboardButton(VkKeyboardButton.Color.NEGATIVE, "Нет",
+													new KeyboardButton(KeyboardButton.Color.NEGATIVE, "Нет",
 															objectMapper.createObjectNode()
 																	.put(ROUTE, NAME)
 																	.put("subgroup", diff.getSecondSubgroup())
@@ -280,7 +276,7 @@ public class ConfigureUserStage implements Stage {
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode jsonNode = objectMapper.readTree(message.getPayload());
 		int subgroup = jsonNode.get("subgroup").asInt();
-		VkUtils.sendMessage(vk, groupActor, message.getUserId(),
+		messageOutput.sendMessage(message.getUserId(),
 				"Твоя подгруппа:" + subgroup);
 		userInfo.setSubgroup(subgroup);
 		registerUser(message, userInfo);
@@ -289,9 +285,9 @@ public class ConfigureUserStage implements Stage {
 	private void registerUser(ExtendedMessage message, UserInfo userInfo) {
 		service.save(userInfo);
 		log.info("Registered user {} with faculty {}, group {} and subgroup {}", message.getUserId(), userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup());
-		VkUtils.sendMessage(vk, groupActor, message.getUserId(), "Всё настроено!");
+		messageOutput.sendMessage(message.getUserId(), "Всё настроено!");
 		userInfoLoadingCache.invalidate(message.getUserId());
-		component.routeMessage(message, MainMenuStage.NAME);
+		messageRouter.routeMessageTo(message, MainMenuStage.NAME);
 	}
 
 	private void returnToFirstStep(ExtendedMessage message) {

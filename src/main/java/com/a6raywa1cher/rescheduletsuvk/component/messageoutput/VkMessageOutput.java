@@ -1,5 +1,6 @@
-package com.a6raywa1cher.rescheduletsuvk.utils;
+package com.a6raywa1cher.rescheduletsuvk.component.messageoutput;
 
+import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -12,27 +13,37 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
-public class VkUtils {
-	private static final Logger log = LoggerFactory.getLogger(VkUtils.class);
+public class VkMessageOutput implements MessageOutput {
+	private static final Logger log = LoggerFactory.getLogger(VkMessageOutput.class);
+	private VkApiClient vk;
+	private GroupActor group;
 
-	public static void sendMessage(VkApiClient vk, GroupActor group, Integer peerId, String message) {
-		sendMessage(vk, group, peerId, message, null);
+	public VkMessageOutput(VkApiClient vk, GroupActor group) {
+		this.vk = vk;
+		this.group = group;
 	}
 
-	public static void sendMessage(VkApiClient vk, GroupActor group, Integer peerId, String message, String keyboard) {
+	public <T> void sendMessage(T peerId, String message) {
+		sendMessage(peerId, message, null);
+	}
+
+	public <T> void sendMessage(T peerId, String message, String keyboard) {
 		if (keyboard == null) keyboard = "{\"buttons\":[],\"one_time\":true}"; // clear keyboard
+		if (!(peerId instanceof Integer)) {
+			throw new IllegalArgumentException("Not integer peerId");
+		}
 		try {
 			if (!keyboard.equals("")) {
 				vk.messages().send(group)
 						.message(message)
-						.peerId(peerId)
+						.peerId((Integer) peerId)
 						.unsafeParam("dont_parse_links", 1)
 						.unsafeParam("keyboard", keyboard)
 						.execute();
 			} else {
 				vk.messages().send(group)
 						.message(message)
-						.peerId(peerId)
+						.peerId((Integer) peerId)
 						.unsafeParam("dont_parse_links", 1)
 						.execute();
 			}
@@ -41,11 +52,11 @@ public class VkUtils {
 		}
 	}
 
-	public static String createKeyboard(boolean oneTime, VkKeyboardButton... buttonsDescriptions) {
+	public String createKeyboard(boolean oneTime, KeyboardButton... buttonsDescriptions) {
 		return createKeyboard(oneTime, null, buttonsDescriptions);
 	}
 
-	public static String createKeyboard(boolean oneTime, int[] grid, VkKeyboardButton... buttonsDescriptions) {
+	public String createKeyboard(boolean oneTime, int[] grid, KeyboardButton... buttonsDescriptions) {
 		ObjectMapper objectMapper = new ObjectMapper();
 		ArrayNode allButtons = objectMapper.createArrayNode();
 		ArrayNode buttonsRaw = objectMapper.createArrayNode();
@@ -78,14 +89,14 @@ public class VkUtils {
 		}
 		int currRaw = 0;
 		int posInRaw = 0;
-		for (VkKeyboardButton vkKeyboardButton : buttonsDescriptions) {
+		for (KeyboardButton keyboardButton : buttonsDescriptions) {
 			ObjectNode button = objectMapper.createObjectNode();
-			button.put("color", vkKeyboardButton.getColor().name().toLowerCase());
+			button.put("color", keyboardButton.getColor().name().toLowerCase());
 			ObjectNode action = objectMapper.createObjectNode()
 					.put("type", "text")
-					.put("label", vkKeyboardButton.getLabel());
-			if (vkKeyboardButton.getPayload() != null) {
-				action.put("payload", vkKeyboardButton.getPayload());
+					.put("label", keyboardButton.getLabel());
+			if (keyboardButton.getPayload() != null) {
+				action.put("payload", keyboardButton.getPayload());
 			}
 			button.set("action", action);
 			buttonsRaw.add(button);

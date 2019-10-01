@@ -1,13 +1,11 @@
 package com.a6raywa1cher.rescheduletsuvk.component.textquery;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
+import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.FacultyService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
-import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
-import com.vk.api.sdk.client.VkApiClient;
-import com.vk.api.sdk.client.actors.GroupActor;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,16 +21,14 @@ import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.GROUPS_EMOJI;
 @Component
 public class DefaultTextQueryExecutor implements TextQueryExecutor {
 	private static final Logger log = LoggerFactory.getLogger(DefaultTextQueryExecutor.class);
-	private VkApiClient vk;
-	private GroupActor group;
+	private MessageOutput messageOutput;
 	private ScheduleService scheduleService;
 	private FacultyService facultyService;
 
 	@Autowired
-	public DefaultTextQueryExecutor(VkApiClient vk, GroupActor group, ScheduleService scheduleService,
+	public DefaultTextQueryExecutor(MessageOutput messageOutput, ScheduleService scheduleService,
 	                                FacultyService facultyService) {
-		this.vk = vk;
-		this.group = group;
+		this.messageOutput = messageOutput;
 		this.scheduleService = scheduleService;
 		this.facultyService = facultyService;
 	}
@@ -44,14 +40,14 @@ public class DefaultTextQueryExecutor implements TextQueryExecutor {
 				userInfo.getFacultyId(), gi.getName(), null, date, LocalDate.now().isEqual(date)))
 				.thenAccept(response -> {
 					if (response.isEmpty()) {
-						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
-								"Пары не найдены", getDefaultKeyboard());
+						messageOutput.sendMessage(extendedMessage.getUserId(),
+								"Пары не найдены", getDefaultKeyboard(messageOutput));
 					} else {
 						String prepared = GROUPS_EMOJI + ' ' +
 								findGroup.toCompletableFuture().getNow(null).getName() + ' ' +
 								response.get();
-						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
-								prepared, getDefaultKeyboard());
+						messageOutput.sendMessage(extendedMessage.getUserId(),
+								prepared, getDefaultKeyboard(messageOutput));
 					}
 				})
 				.exceptionally(e -> {

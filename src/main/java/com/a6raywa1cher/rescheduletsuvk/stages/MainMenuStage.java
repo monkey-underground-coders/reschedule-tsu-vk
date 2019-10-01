@@ -1,16 +1,14 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
-import com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent;
+import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
+import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.textquery.TextQueryProcessor;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
-import com.a6raywa1cher.rescheduletsuvk.utils.VkKeyboardButton;
-import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
+import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vk.api.sdk.client.VkApiClient;
-import com.vk.api.sdk.client.actors.GroupActor;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent.ROUTE;
+import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
 import static com.a6raywa1cher.rescheduletsuvk.stages.MainMenuStage.NAME;
 import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.*;
 
@@ -37,38 +35,36 @@ public class MainMenuStage implements Stage {
 	private static final String DROP_SETTINGS = "Изменить группу";
 	private static final String GET_INFO = "Информация";
 	private static final Logger log = LoggerFactory.getLogger(MainMenuStage.class);
-	private VkApiClient vk;
-	private GroupActor group;
-	private StageRouterComponent stageRouterComponent;
+	private MessageOutput messageOutput;
+	private MessageRouter messageRouter;
 	private UserInfoService service;
 	private ScheduleService scheduleService;
 	private TextQueryProcessor textQueryProcessor;
 
 	@Autowired
-	public MainMenuStage(VkApiClient vk, GroupActor group, StageRouterComponent stageRouterComponent,
+	public MainMenuStage(MessageOutput messageOutput, MessageRouter messageRouter,
 	                     UserInfoService service, ScheduleService scheduleService, TextQueryProcessor textQueryProcessor) {
-		this.vk = vk;
-		this.group = group;
-		this.stageRouterComponent = stageRouterComponent;
+		this.messageOutput = messageOutput;
+		this.messageRouter = messageRouter;
 		this.service = service;
 		this.scheduleService = scheduleService;
 		this.textQueryProcessor = textQueryProcessor;
 	}
 
-	public static String getDefaultKeyboard() {
+	public static String getDefaultKeyboard(MessageOutput messageOutput) {
 		ObjectMapper objectMapper = new ObjectMapper();
 		String basicPayload = objectMapper.createObjectNode()
 				.put(ROUTE, NAME)
 				.toString();
-		return VkUtils.createKeyboard(false, new int[]{1, 1, 1, 1, 2, 2},
-				new VkKeyboardButton(VkKeyboardButton.Color.PRIMARY, GET_SEVEN_DAYS, basicPayload),
-				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_TODAY_LESSONS, basicPayload),
-				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_NEXT_LESSON, basicPayload),
-				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_TOMORROW_LESSONS, basicPayload),
-				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_TEACHER_LESSONS, basicPayload),
-				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_RAW_SCHEDULE, basicPayload),
-				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, DROP_SETTINGS, basicPayload),
-				new VkKeyboardButton(VkKeyboardButton.Color.SECONDARY, GET_INFO, basicPayload)
+		return messageOutput.createKeyboard(false, new int[]{1, 1, 1, 1, 2, 2},
+				new KeyboardButton(KeyboardButton.Color.PRIMARY, GET_SEVEN_DAYS, basicPayload),
+				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_TODAY_LESSONS, basicPayload),
+				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_NEXT_LESSON, basicPayload),
+				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_TOMORROW_LESSONS, basicPayload),
+				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_TEACHER_LESSONS, basicPayload),
+				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_RAW_SCHEDULE, basicPayload),
+				new KeyboardButton(KeyboardButton.Color.SECONDARY, DROP_SETTINGS, basicPayload),
+				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_INFO, basicPayload)
 		);
 	}
 
@@ -76,8 +72,8 @@ public class MainMenuStage implements Stage {
 		scheduleService.getScheduleForSevenDays(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(),
 				LocalDate.now())
 				.thenAccept(schedule -> {
-					VkUtils.sendMessage(vk, group, message.getUserId(),
-							schedule, getDefaultKeyboard());
+					messageOutput.sendMessage(message.getUserId(),
+							schedule, getDefaultKeyboard(messageOutput));
 				})
 				.exceptionally(e -> {
 					log.error("Get seven days error\n" + message.toString() + "\n", e);
@@ -90,13 +86,13 @@ public class MainMenuStage implements Stage {
 		scheduleService.getScheduleFor(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), LocalDate.now(), true)
 				.thenAccept(optional -> {
 					if (optional.isEmpty()) {
-						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
+						messageOutput.sendMessage(extendedMessage.getUserId(),
 								"Сегодня нет пар! Отдыхай, студент",
-								getDefaultKeyboard());
+								getDefaultKeyboard(messageOutput));
 					} else {
-						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
+						messageOutput.sendMessage(extendedMessage.getUserId(),
 								optional.get(),
-								getDefaultKeyboard());
+								getDefaultKeyboard(messageOutput));
 					}
 				})
 				.exceptionally(e -> {
@@ -110,13 +106,13 @@ public class MainMenuStage implements Stage {
 		scheduleService.getNextLesson(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), LocalDateTime.now())
 				.thenAccept(optional -> {
 					if (optional.isEmpty()) {
-						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
+						messageOutput.sendMessage(extendedMessage.getUserId(),
 								"Больше сегодня пар не ожидается",
-								getDefaultKeyboard());
+								getDefaultKeyboard(messageOutput));
 					} else {
-						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
+						messageOutput.sendMessage(extendedMessage.getUserId(),
 								optional.get(),
-								getDefaultKeyboard());
+								getDefaultKeyboard(messageOutput));
 					}
 				})
 				.exceptionally(e -> {
@@ -145,14 +141,14 @@ public class MainMenuStage implements Stage {
 		scheduleService.getScheduleFor(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), finalLocalDate, false)
 				.thenAccept(optional -> {
 					if (optional.isEmpty()) {
-						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
+						messageOutput.sendMessage(extendedMessage.getUserId(),
 								finalIsDayAfterTomorrow ? "Послезавтра нет пар! Отдыхай, студент" :
 										"Завтра нет пар! Отдыхай, студент",
-								getDefaultKeyboard());
+								getDefaultKeyboard(messageOutput));
 					} else {
-						VkUtils.sendMessage(vk, group, extendedMessage.getUserId(),
+						messageOutput.sendMessage(extendedMessage.getUserId(),
 								optional.get(),
-								getDefaultKeyboard());
+								getDefaultKeyboard(messageOutput));
 					}
 				})
 				.exceptionally(e -> {
@@ -167,33 +163,33 @@ public class MainMenuStage implements Stage {
 	}
 
 	private void getRawSchedule(ExtendedMessage message) {
-		stageRouterComponent.routeMessage(message, RawScheduleStage.NAME);
+		messageRouter.routeMessageTo(message, RawScheduleStage.NAME);
 	}
 
 	private void dropSettings(UserInfo userInfo, ExtendedMessage message) {
 		service.delete(userInfo);
-		stageRouterComponent.routeMessage(message, WelcomeStage.NAME);
+		messageRouter.routeMessageTo(message, WelcomeStage.NAME);
 	}
 
 	private void greeting(UserInfo userInfo, ExtendedMessage message) {
-		VkUtils.sendMessage(vk, group, message.getUserId(),
+		messageOutput.sendMessage(message.getUserId(),
 				"Главное меню. Тут уютно, есть печеньки. " + COOKIES_EMOJI + '\n' +
 						"Настроена " + userInfo.getGroupId() + " группа" +
 						(userInfo.getSubgroup() != null ? ", " + userInfo.getSubgroup() + " подгруппа" : "") + '\n' +
 						"Условные обозначения: \n" +
 						CROSS_PAIR_EMOJI + " - пара у нескольких групп, \n" +
-						SINGLE_SUBGROUP_EMOJI + " - пара только у одной из подгрупп.", getDefaultKeyboard());
+						SINGLE_SUBGROUP_EMOJI + " - пара только у одной из подгрупп.", getDefaultKeyboard(messageOutput));
 	}
 
 	private void getTeacherLessons(ExtendedMessage message) {
-		stageRouterComponent.routeMessage(message, FindTeacherStage.NAME);
+		messageRouter.routeMessageTo(message, FindTeacherStage.NAME);
 	}
 
 	@Override
 	public void accept(ExtendedMessage message) {
 		Optional<UserInfo> optionalUserInfo = service.getById(message.getUserId());
 		if (optionalUserInfo.isEmpty()) {
-			stageRouterComponent.routeMessage(message, WelcomeStage.NAME);
+			messageRouter.routeMessageTo(message, WelcomeStage.NAME);
 			return;
 		}
 		if (message.getPayload() != null) {

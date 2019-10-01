@@ -2,19 +2,17 @@ package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
-import com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent;
+import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
+import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
-import com.a6raywa1cher.rescheduletsuvk.utils.VkKeyboardButton;
-import com.a6raywa1cher.rescheduletsuvk.utils.VkUtils;
+import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vk.api.sdk.client.VkApiClient;
-import com.vk.api.sdk.client.actors.GroupActor;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,25 +23,23 @@ import java.time.DayOfWeek;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.a6raywa1cher.rescheduletsuvk.component.StageRouterComponent.ROUTE;
+import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
 import static com.a6raywa1cher.rescheduletsuvk.stages.RawScheduleStage.NAME;
 
 @Component(NAME)
 public class RawScheduleStage implements Stage {
 	public static final String NAME = "rawScheduleStage";
 	private static final Logger log = LoggerFactory.getLogger(RawScheduleStage.class);
-	private VkApiClient vk;
-	private GroupActor group;
-	private StageRouterComponent stageRouterComponent;
+	private MessageOutput messageOutput;
+	private MessageRouter messageRouter;
 	private RtsServerRestComponent restComponent;
 	private UserInfoService service;
 
 	@Autowired
-	public RawScheduleStage(VkApiClient vk, GroupActor group, StageRouterComponent stageRouterComponent,
+	public RawScheduleStage(MessageOutput messageOutput, MessageRouter messageRouter,
 	                        RtsServerRestComponent restComponent, UserInfoService service) {
-		this.vk = vk;
-		this.group = group;
-		this.stageRouterComponent = stageRouterComponent;
+		this.messageOutput = messageOutput;
+		this.messageRouter = messageRouter;
 		this.restComponent = restComponent;
 		this.service = service;
 	}
@@ -62,23 +58,23 @@ public class RawScheduleStage implements Stage {
 						try {
 							step2(userInfo, message);
 						} catch (JsonProcessingException e) {
-							stageRouterComponent.routeMessage(message, MainMenuStage.NAME);
+							messageRouter.routeMessageTo(message, MainMenuStage.NAME);
 						}
 					}
 					WeekSign weekSign = response.getWeekSign();
 					WeekSign inverse = WeekSign.inverse(weekSign);
-					VkUtils.sendMessage(vk, group, message.getUserId(),
+					messageOutput.sendMessage(message.getUserId(),
 							"Окей, выбери неделю",
-							VkUtils.createKeyboard(true,
-									new VkKeyboardButton(
-											weekSign == WeekSign.MINUS ? VkKeyboardButton.Color.NEGATIVE :
-													VkKeyboardButton.Color.POSITIVE,
+							messageOutput.createKeyboard(true,
+									new KeyboardButton(
+											weekSign == WeekSign.MINUS ? KeyboardButton.Color.NEGATIVE :
+													KeyboardButton.Color.POSITIVE,
 											"Текущая: " + weekSign.getPrettyString(),
 											toPayload(weekSign)
 									),
-									new VkKeyboardButton(inverse == WeekSign.MINUS ?
-											VkKeyboardButton.Color.NEGATIVE :
-											VkKeyboardButton.Color.POSITIVE,
+									new KeyboardButton(inverse == WeekSign.MINUS ?
+											KeyboardButton.Color.NEGATIVE :
+											KeyboardButton.Color.POSITIVE,
 											"Следующая: " + inverse.getPrettyString(),
 											toPayload(inverse))));
 				})
@@ -112,8 +108,8 @@ public class RawScheduleStage implements Stage {
 						sb.append(CommonUtils.convertLessonCells(dayOfWeek, weekSign, false,
 								sorted.get(dayOfWeek), false));
 					}
-					VkUtils.sendMessage(vk, group, message.getUserId(), sb.toString(),
-							MainMenuStage.getDefaultKeyboard());
+					messageOutput.sendMessage(message.getUserId(), sb.toString(),
+							MainMenuStage.getDefaultKeyboard(messageOutput));
 				})
 				.exceptionally(e -> {
 					log.error("Get raw schedule error\n" + message.toString() + "\n", e);
@@ -126,11 +122,11 @@ public class RawScheduleStage implements Stage {
 	public void accept(ExtendedMessage message) {
 		Optional<UserInfo> optionalUserInfo = service.getById(message.getUserId());
 		if (optionalUserInfo.isEmpty()) {
-			stageRouterComponent.routeMessage(message, WelcomeStage.NAME);
+			messageRouter.routeMessageTo(message, WelcomeStage.NAME);
 			return;
 		}
 		if (message.getPayload() == null) {
-			stageRouterComponent.routeMessage(message, MainMenuStage.NAME);
+			messageRouter.routeMessageTo(message, MainMenuStage.NAME);
 		}
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(message.getPayload());
@@ -140,7 +136,7 @@ public class RawScheduleStage implements Stage {
 				step2(optionalUserInfo.get(), message);
 			}
 		} catch (JsonProcessingException e) {
-			stageRouterComponent.routeMessage(message, MainMenuStage.NAME);
+			messageRouter.routeMessageTo(message, MainMenuStage.NAME);
 		}
 	}
 }

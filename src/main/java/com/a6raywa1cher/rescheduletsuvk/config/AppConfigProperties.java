@@ -6,9 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -17,13 +14,7 @@ import java.util.Set;
 @Data
 @Validated
 public class AppConfigProperties {
-	@NotNull
-	@Min(0)
-	private Integer groupId;
-	@NotBlank
-	private String token;
 	@URL
-	@NotBlank
 	private String rtsUrl;
 
 	private boolean activateDialogFlow = false;
