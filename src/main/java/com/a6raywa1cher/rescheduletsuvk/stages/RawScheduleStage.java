@@ -6,6 +6,7 @@ import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
+import com.a6raywa1cher.rescheduletsuvk.config.StringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
@@ -33,15 +34,20 @@ public class RawScheduleStage implements Stage {
 	private MessageOutput messageOutput;
 	private MessageRouter messageRouter;
 	private RtsServerRestComponent restComponent;
+	private StringsConfigProperties properties;
 	private UserInfoService service;
+	private CommonUtils commonUtils;
 
 	@Autowired
 	public RawScheduleStage(MessageOutput messageOutput, MessageRouter messageRouter,
-	                        RtsServerRestComponent restComponent, UserInfoService service) {
+	                        RtsServerRestComponent restComponent, StringsConfigProperties properties,
+	                        UserInfoService service, CommonUtils commonUtils) {
 		this.messageOutput = messageOutput;
 		this.messageRouter = messageRouter;
 		this.restComponent = restComponent;
+		this.properties = properties;
 		this.service = service;
+		this.commonUtils = commonUtils;
 	}
 
 	private String toPayload(WeekSign weekSign) {
@@ -64,18 +70,18 @@ public class RawScheduleStage implements Stage {
 					WeekSign weekSign = response.getWeekSign();
 					WeekSign inverse = WeekSign.inverse(weekSign);
 					messageOutput.sendMessage(message.getUserId(),
-							"Окей, выбери неделю",
+							properties.getChooseWeekSign(),
 							messageOutput.createKeyboard(true,
 									new KeyboardButton(
 											weekSign == WeekSign.MINUS ? KeyboardButton.Color.NEGATIVE :
 													KeyboardButton.Color.POSITIVE,
-											"Текущая: " + weekSign.getPrettyString(),
+											String.format(properties.getCurrentWeek(), weekSign.getPrettyString()),
 											toPayload(weekSign)
 									),
 									new KeyboardButton(inverse == WeekSign.MINUS ?
 											KeyboardButton.Color.NEGATIVE :
 											KeyboardButton.Color.POSITIVE,
-											"Следующая: " + inverse.getPrettyString(),
+											String.format(properties.getNextWeek(), inverse.getPrettyString()),
 											toPayload(inverse))));
 				})
 				.exceptionally(e -> {
@@ -105,11 +111,11 @@ public class RawScheduleStage implements Stage {
 					StringBuilder sb = new StringBuilder();
 					for (int i = 1; i < 7; i++) {
 						DayOfWeek dayOfWeek = DayOfWeek.of(i);
-						sb.append(CommonUtils.convertLessonCells(dayOfWeek, weekSign, false,
+						sb.append(commonUtils.convertLessonCells(dayOfWeek, weekSign, false,
 								sorted.get(dayOfWeek), false));
 					}
 					messageOutput.sendMessage(message.getUserId(), sb.toString(),
-							MainMenuStage.getDefaultKeyboard(messageOutput));
+							MainMenuStage.getDefaultKeyboard(messageOutput, properties));
 				})
 				.exceptionally(e -> {
 					log.error("Get raw schedule error\n" + message.toString() + "\n", e);

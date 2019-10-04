@@ -2,9 +2,12 @@ package com.a6raywa1cher.rescheduletsuvk.utils;
 
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
+import com.a6raywa1cher.rescheduletsuvk.config.StringsConfigProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
+import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
@@ -13,6 +16,7 @@ import java.time.format.TextStyle;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Component
 public class CommonUtils {
 	public static final String CROSS_PAIR_EMOJI = "\ud83d\udd17";
 	public static final String SINGLE_SUBGROUP_EMOJI = "\ud83d\udc64";
@@ -24,32 +28,26 @@ public class CommonUtils {
 	public static final String ARROW_DOWN_EMOJI = "\u2b07\ufe0f";
 	public static final String ARROW_RIGHT_EMOJI = "\u27a1\ufe0f";
 	public static final String GROUPS_EMOJI = "\uD83D\uDC65";
+	private StringsConfigProperties properties;
 
-	public static String emojifyDigit(int digit) {
-		String[] digits = new String[]{
-				/* 0 */ "\u0030\ufe0f\u20e3",
-				/* 1 */ "\u0031\ufe0f\u20e3",
-				/* 2 */ "\u0032\ufe0f\u20e3",
-				/* 3 */ "\u0033\ufe0f\u20e3",
-				/* 4 */ "\u0034\ufe0f\u20e3",
-				/* 5 */ "\u0035\ufe0f\u20e3",
-				/* 6 */ "\u0036\ufe0f\u20e3",
-				/* 7 */ "\u0037\ufe0f\u20e3",
-				/* 8 */ "\u0038\ufe0f\u20e3",
-				/* 9 */ "\u0039\ufe0f\u20e3"
-		};
-		return 0 <= digit && digit <= 9 ? digits[digit] : Integer.toString(digit);
+	@Autowired
+	public CommonUtils(StringsConfigProperties properties) {
+		this.properties = properties;
 	}
 
-	public static String convertLessonCells(DayOfWeek dayOfWeek, WeekSign weekSign, boolean today,
-	                                        Collection<LessonCellMirror> lessonCellMirrors, boolean detailed) {
+	public String emojifyDigit(int digit) {
+		return 0 <= digit && digit <= 9 ? properties.getDigits()[digit] : Integer.toString(digit);
+	}
+
+	public String convertLessonCells(DayOfWeek dayOfWeek, WeekSign weekSign, boolean today,
+	                                 Collection<LessonCellMirror> lessonCellMirrors, boolean detailed) {
 		return convertLessonCells(dayOfWeek, weekSign, today, lessonCellMirrors, detailed,
 				true, false);
 	}
 
-	public static String convertLessonCells(DayOfWeek dayOfWeek, WeekSign weekSign, boolean today,
-	                                        Collection<LessonCellMirror> lessonCellMirrors, boolean detailed,
-	                                        boolean showTeachers, boolean showGroups) {
+	public String convertLessonCells(DayOfWeek dayOfWeek, WeekSign weekSign, boolean today,
+	                                 Collection<LessonCellMirror> lessonCellMirrors, boolean detailed,
+	                                 boolean showTeachers, boolean showGroups) {
 		StringBuilder sb = new StringBuilder();
 		sb.append(String.format("%s (%s):\n",
 				dayOfWeek.getDisplayName(TextStyle.FULL, Locale.forLanguageTag("ru-RU")),
@@ -66,10 +64,10 @@ public class CommonUtils {
 		order.sort(Comparator.naturalOrder());
 		for (Set<LessonCellMirror> cellMirror : order.stream().map(map::get).collect(Collectors.toList())) {
 			if (cellMirror.size() == 1) {
-				sb.append(CommonUtils.convertLessonCell(cellMirror.iterator().next(), today, detailed, showTeachers,
+				sb.append(convertLessonCell(cellMirror.iterator().next(), today, detailed, showTeachers,
 						showGroups)).append('\n');
 			} else {
-				sb.append(CommonUtils.reduceLessonCells(cellMirror, today, detailed, showTeachers, showGroups))
+				sb.append(reduceLessonCells(cellMirror, today, detailed, showTeachers, showGroups))
 						.append('\n');
 			}
 		}
@@ -77,7 +75,7 @@ public class CommonUtils {
 		return sb.toString();
 	}
 
-	private static String findFirstCapitalLetter(String str) {
+	private String findFirstCapitalLetter(String str) {
 		for (int i = 0; i < str.length(); i++) {
 			if (Character.isUpperCase(str.charAt(i))) {
 				return Character.toString(str.charAt(i));
@@ -86,8 +84,8 @@ public class CommonUtils {
 		return Character.toString(Character.toUpperCase(str.charAt(0)));
 	}
 
-	public static String reduceLessonCells(Collection<LessonCellMirror> mirrors, boolean today, boolean detailed,
-	                                       boolean showTeachers, boolean showGroups) {
+	public String reduceLessonCells(Collection<LessonCellMirror> mirrors, boolean today, boolean detailed,
+	                                boolean showTeachers, boolean showGroups) {
 		Set<String> subjectNames = new LinkedHashSet<>();
 		Set<String> auditories = new LinkedHashSet<>();
 		Set<Pair<String, Integer>> groupsAndSubgroups = new LinkedHashSet<>();
@@ -126,12 +124,12 @@ public class CommonUtils {
 		return convertLessonView(lessonCellView, today, detailed, showTeachers, showGroups);
 	}
 
-	public static String convertLessonCell(LessonCellMirror mirror, boolean today, boolean detailed) {
+	public String convertLessonCell(LessonCellMirror mirror, boolean today, boolean detailed) {
 		return convertLessonCell(mirror, today, detailed, true, false);
 	}
 
-	public static String convertLessonCell(LessonCellMirror mirror, boolean today, boolean detailed,
-	                                       boolean showTeachers, boolean showGroups) {
+	public String convertLessonCell(LessonCellMirror mirror, boolean today, boolean detailed,
+	                                boolean showTeachers, boolean showGroups) {
 		LessonCellView lessonCellView = new LessonCellView(
 				Collections.singletonList(mirror.getFullSubjectName()),
 				(mirror.getTeacherName() == null) ? Collections.emptyList() :
@@ -146,8 +144,8 @@ public class CommonUtils {
 		return convertLessonView(lessonCellView, today, detailed, showTeachers, showGroups);
 	}
 
-	private static String convertLessonView(LessonCellView view, boolean today, boolean detailed,
-	                                        boolean showTeachers, boolean showGroups) {
+	private String convertLessonView(LessonCellView view, boolean today, boolean detailed,
+	                                 boolean showTeachers, boolean showGroups) {
 		boolean subgroup = view.getGroupsAndSubgroups().size() == 1 &&
 				view.getGroupsAndSubgroups().get(0).getSecond() != 0;
 		StringBuilder out = new StringBuilder(emojifyDigit(view.getColumnPosition() + 1));

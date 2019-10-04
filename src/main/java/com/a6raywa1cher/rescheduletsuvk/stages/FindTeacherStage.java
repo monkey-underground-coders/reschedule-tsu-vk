@@ -5,15 +5,15 @@ import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetScheduleOfTeacherForWeekResponse;
+import com.a6raywa1cher.rescheduletsuvk.config.StringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
 import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vk.api.sdk.client.VkApiClient;
-import com.vk.api.sdk.client.actors.GroupActor;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -27,18 +27,25 @@ import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.TEACHER_EMOJI;
 @Component(NAME)
 public class FindTeacherStage implements Stage {
 	public static final String NAME = "findTeacherStage";
-	public static final String TEACHER_NAME_REGEX = "[a-zA-Zа-яА-Я _']{1,100}";
 	private static final Logger log = LoggerFactory.getLogger(FindTeacherStage.class);
 	private MessageRouter messageRouter;
 	private MessageOutput messageOutput;
+	private StringsConfigProperties properties;
 	private RtsServerRestComponent restComponent;
+	private CommonUtils commonUtils;
+
+	@Value("${app.strings.teacher-name-regexp}")
+	private String teacherNameRegex;
 
 	@Autowired
-	public FindTeacherStage(MessageRouter messageRouter, VkApiClient vk, GroupActor group,
-	                        MessageOutput messageOutput, RtsServerRestComponent restComponent) {
+	public FindTeacherStage(MessageRouter messageRouter, MessageOutput messageOutput,
+	                        StringsConfigProperties properties, RtsServerRestComponent restComponent,
+	                        CommonUtils commonUtils) {
 		this.messageRouter = messageRouter;
 		this.messageOutput = messageOutput;
+		this.properties = properties;
 		this.restComponent = restComponent;
+		this.commonUtils = commonUtils;
 	}
 
 	private String getKeyboard() {
@@ -59,7 +66,7 @@ public class FindTeacherStage implements Stage {
 	}
 
 	private void step2(ExtendedMessage message) {
-		if (!message.getBody().matches(TEACHER_NAME_REGEX)) {
+		if (!message.getBody().matches(teacherNameRegex)) {
 			messageOutput.sendMessage(message.getUserId(), "Некорректное имя преподавателя", getKeyboard());
 			return;
 		}
@@ -89,7 +96,7 @@ public class FindTeacherStage implements Stage {
 	}
 
 	private void step3(ExtendedMessage message, String teacherName) {
-		if (!message.getBody().matches(TEACHER_NAME_REGEX)) {
+		if (!message.getBody().matches(teacherNameRegex)) {
 			messageOutput.sendMessage(message.getUserId(), "Некорректное имя преподавателя", getKeyboard());
 			return;
 		}
@@ -98,12 +105,12 @@ public class FindTeacherStage implements Stage {
 					StringBuilder sb = new StringBuilder(TEACHER_EMOJI + ' ' + teacherName + '\n');
 					boolean today = response.getSchedules().get(0).getDayOfWeek() == LocalDate.now().getDayOfWeek();
 					for (GetScheduleOfTeacherForWeekResponse.Schedule schedule : response.getSchedules()) {
-						sb.append(CommonUtils.convertLessonCells(schedule.getDayOfWeek(), schedule.getSign(),
+						sb.append(commonUtils.convertLessonCells(schedule.getDayOfWeek(), schedule.getSign(),
 								today, schedule.getCells(), false, false, true));
 						today = false;
 					}
 					messageOutput.sendMessage(message.getUserId(),
-							sb.toString(), MainMenuStage.getDefaultKeyboard(messageOutput));
+							sb.toString(), MainMenuStage.getDefaultKeyboard(messageOutput, properties));
 					returnToMainMenu(message, true);
 				})
 				.exceptionally(e -> {

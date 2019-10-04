@@ -22,6 +22,7 @@ import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
@@ -42,10 +43,13 @@ import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.ARROW_DOWN_EMOJ
 @Component(NAME)
 public class ConfigureUserStage implements Stage {
 	public static final String NAME = "configureUserStage";
-	public static final String FACULTY_REGEX = "[а-яА-Я, \\-0-9]{3,50}";
-	public static final String GROUP_REGEX = "[а-яА-Я, \\-0-9'.(М)]{1,150}";
-	public static final String COURSE_REGEX = "[1-7]";
 	private static final Logger log = LoggerFactory.getLogger(ConfigureUserStage.class);
+	@Value("${app.strings.faculty-regexp}")
+	public String facultyRegex;
+	@Value("${app.strings.group-regexp}")
+	public String groupRegex;
+	@Value("${app.strings.course-regexp}")
+	public String courseRegex;
 	private MessageOutput messageOutput;
 	private LoadingCache<Integer, Pair<UserInfo, Integer>> userInfoLoadingCache;
 	private UserInfoService service;
@@ -53,17 +57,20 @@ public class ConfigureUserStage implements Stage {
 	private AppConfigProperties properties;
 	private ScheduleService scheduleService;
 	private FacultyService facultyService;
+	private CommonUtils commonUtils;
 
 	@Autowired
 	public ConfigureUserStage(MessageOutput messageOutput, UserInfoService service,
 	                          MessageRouter messageRouter, AppConfigProperties properties,
-	                          ScheduleService scheduleService, FacultyService facultyService) {
+	                          ScheduleService scheduleService, FacultyService facultyService,
+	                          CommonUtils commonUtils) {
 		this.messageOutput = messageOutput;
 		this.service = service;
 		this.messageRouter = messageRouter;
 		this.properties = properties;
 		this.scheduleService = scheduleService;
 		this.facultyService = facultyService;
+		this.commonUtils = commonUtils;
 		this.userInfoLoadingCache = CacheBuilder.newBuilder()
 				.expireAfterAccess(1, TimeUnit.HOURS)
 				.build(new CacheLoader<>() {
@@ -110,7 +117,7 @@ public class ConfigureUserStage implements Stage {
 	private void step2(ExtendedMessage message, UserInfo userInfo) {
 		Integer peerId = message.getUserId();
 		String facultyId = message.getBody();
-		if (facultyId == null || !facultyId.matches(FACULTY_REGEX)) {
+		if (facultyId == null || !facultyId.matches(facultyRegex)) {
 			returnToFirstStep(message);
 			return;
 		}
@@ -181,7 +188,7 @@ public class ConfigureUserStage implements Stage {
 		String course = message.getBody();
 		JsonNode payload = objectMapper.readTree(message.getPayload());
 		String level = payload.get("level").asText();
-		if (course == null || !course.matches(COURSE_REGEX) || level == null ||
+		if (course == null || !course.matches(courseRegex) || level == null ||
 				(!level.equals("Бакалавриат | Специалитет") && !level.equals("Магистратура"))) {
 			returnToFirstStep(message);
 			return;
@@ -220,7 +227,7 @@ public class ConfigureUserStage implements Stage {
 		JsonNode payload = objectMapper.readTree(message.getPayload());
 		String groupId = payload.get("groupName").asText();
 		String facultyId = userInfo.getFacultyId();
-		if (groupId == null || !groupId.matches(GROUP_REGEX)) {
+		if (groupId == null || !groupId.matches(groupRegex)) {
 			returnToFirstStep(message);
 			return;
 		}
@@ -245,7 +252,7 @@ public class ConfigureUserStage implements Stage {
 															mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
 																	Locale.forLanguageTag("ru-RU")),
 															mirror1.getWeekSign().getPrettyString()) +
-													CommonUtils.convertLessonCell(mirror1, false, true),
+													commonUtils.convertLessonCell(mirror1, false, true),
 											messageOutput.createKeyboard(true,
 													new KeyboardButton(KeyboardButton.Color.POSITIVE, "Да",
 															objectMapper.createObjectNode()

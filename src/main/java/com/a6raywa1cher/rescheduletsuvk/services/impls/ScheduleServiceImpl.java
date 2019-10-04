@@ -10,6 +10,7 @@ import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
@@ -25,9 +26,12 @@ import java.util.stream.Collectors;
 public class ScheduleServiceImpl implements ScheduleService {
 	private static final Logger log = LoggerFactory.getLogger(ScheduleServiceImpl.class);
 	private RtsServerRestComponent restComponent;
+	private CommonUtils commonUtils;
 
-	public ScheduleServiceImpl(RtsServerRestComponent restComponent) {
+	@Autowired
+	public ScheduleServiceImpl(RtsServerRestComponent restComponent, CommonUtils commonUtils) {
 		this.restComponent = restComponent;
+		this.commonUtils = commonUtils;
 	}
 
 	@Override
@@ -53,7 +57,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 					if (todayLessons.isEmpty()) {
 						return Optional.<String>empty();
 					} else {
-						return Optional.of(CommonUtils.convertLessonCells(date.getDayOfWeek(),
+						return Optional.of(commonUtils.convertLessonCells(date.getDayOfWeek(),
 								weekSign, today, todayLessons, true));
 					}
 				})
@@ -81,7 +85,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 					if (nextLesson.isEmpty()) {
 						return Optional.<String>empty();
 					} else {
-						return Optional.of(CommonUtils.convertLessonCell(nextLesson.get(), true, true));
+						return Optional.of(commonUtils.convertLessonCell(nextLesson.get(), true, true));
 					}
 				})
 				.exceptionally(e -> {
@@ -101,7 +105,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 					StringBuilder sb = new StringBuilder();
 					boolean today = response.getSchedules().get(0).getDayOfWeek() == LocalDate.now().getDayOfWeek();
 					for (GetScheduleForWeekResponse.Schedule schedule : response.getSchedules()) {
-						sb.append(CommonUtils.convertLessonCells(schedule.getDayOfWeek(), schedule.getSign(),
+						sb.append(commonUtils.convertLessonCells(schedule.getDayOfWeek(), schedule.getSign(),
 								today, schedule.getCells().stream()
 										.filter(cell -> cell.getSubgroup() == 0 || cell.getSubgroup().equals(subgroup))
 										.collect(Collectors.toList()), false));
