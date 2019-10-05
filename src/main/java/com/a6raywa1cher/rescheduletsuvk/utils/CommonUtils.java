@@ -32,15 +32,15 @@ public class CommonUtils {
 	public String convertLessonCells(DayOfWeek dayOfWeek, WeekSign weekSign, boolean today,
 	                                 Collection<LessonCellMirror> lessonCellMirrors, boolean detailed) {
 		return convertLessonCells(dayOfWeek, weekSign, today, lessonCellMirrors, detailed,
-				true, false);
+				true, false, true);
 	}
 
 	public String convertLessonCells(DayOfWeek dayOfWeek, WeekSign weekSign, boolean today,
 	                                 Collection<LessonCellMirror> lessonCellMirrors, boolean detailed,
-	                                 boolean showTeachers, boolean showGroups) {
+	                                 boolean showTeachers, boolean showGroups, boolean showEmoji) {
 		StringBuilder sb = new StringBuilder();
 		sb.append(String.format("%s (%s):\n",
-				dayOfWeek.getDisplayName(TextStyle.FULL, Locale.forLanguageTag("ru-RU")),
+				dayOfWeek.getDisplayName(TextStyle.FULL, Locale.forLanguageTag("ru-RU")).toUpperCase(),
 				weekSign.getPrettyString()
 		));
 		Map<Integer, Set<LessonCellMirror>> map = new HashMap<>();
@@ -55,11 +55,12 @@ public class CommonUtils {
 		for (Set<LessonCellMirror> cellMirror : order.stream().map(map::get).collect(Collectors.toList())) {
 			if (cellMirror.size() == 1) {
 				sb.append(convertLessonCell(cellMirror.iterator().next(), today, detailed, showTeachers,
-						showGroups)).append('\n');
+						showGroups, showEmoji)).append('\n');
 			} else {
-				sb.append(reduceLessonCells(cellMirror, today, detailed, showTeachers, showGroups))
+				sb.append(reduceLessonCells(cellMirror, today, detailed, showTeachers, showGroups, showEmoji))
 						.append('\n');
 			}
+			sb.append('\n');
 		}
 		sb.append('\n');
 		return sb.toString();
@@ -75,7 +76,7 @@ public class CommonUtils {
 	}
 
 	public String reduceLessonCells(Collection<LessonCellMirror> mirrors, boolean today, boolean detailed,
-	                                boolean showTeachers, boolean showGroups) {
+	                                boolean showTeachers, boolean showGroups, boolean showEmoji) {
 		Set<String> subjectNames = new LinkedHashSet<>();
 		Set<String> auditories = new LinkedHashSet<>();
 		Set<Pair<String, Integer>> groupsAndSubgroups = new LinkedHashSet<>();
@@ -111,15 +112,15 @@ public class CommonUtils {
 		LessonCellView lessonCellView = new LessonCellView(new ArrayList<>(subjectNames), new ArrayList<>(teachers),
 				new ArrayList<>(groupsAndSubgroups), new ArrayList<>(auditories), columnPosition,
 				crossPair, start, end);
-		return convertLessonView(lessonCellView, today, detailed, showTeachers, showGroups);
+		return convertLessonView(lessonCellView, today, detailed, showTeachers, showGroups, showEmoji);
 	}
 
 	public String convertLessonCell(LessonCellMirror mirror, boolean today, boolean detailed) {
-		return convertLessonCell(mirror, today, detailed, true, false);
+		return convertLessonCell(mirror, today, detailed, true, false, true);
 	}
 
 	public String convertLessonCell(LessonCellMirror mirror, boolean today, boolean detailed,
-	                                boolean showTeachers, boolean showGroups) {
+	                                boolean showTeachers, boolean showGroups, boolean showEmoji) {
 		LessonCellView lessonCellView = new LessonCellView(
 				Collections.singletonList(mirror.getFullSubjectName()),
 				(mirror.getTeacherName() == null) ? Collections.emptyList() :
@@ -131,11 +132,11 @@ public class CommonUtils {
 				mirror.getColumnPosition(), mirror.getCrossPair(), mirror.getStart(),
 				mirror.getEnd()
 		);
-		return convertLessonView(lessonCellView, today, detailed, showTeachers, showGroups);
+		return convertLessonView(lessonCellView, today, detailed, showTeachers, showGroups, showEmoji);
 	}
 
 	private String convertLessonView(LessonCellView view, boolean today, boolean detailed,
-	                                 boolean showTeachers, boolean showGroups) {
+	                                 boolean showTeachers, boolean showGroups, boolean showEmoji) {
 		boolean subgroup = view.getGroupsAndSubgroups().size() == 1 &&
 				view.getGroupsAndSubgroups().get(0).getSecond() != 0;
 		StringBuilder out = new StringBuilder(emojifyDigit(view.getColumnPosition() + 1));
@@ -149,7 +150,7 @@ public class CommonUtils {
 				out.append(properties.getPastLessonEmoji());
 			}
 		}
-		out.append(String.format(" (%s - %s) ",
+		out.append(String.format(" %s - %s: ",
 				view.getStart().format(DateTimeFormatter.ofPattern("HH:mm")),
 				view.getEnd().format(DateTimeFormatter.ofPattern("HH:mm"))));
 		out.append(view.getSubjectNames().stream().map(name -> name + ", ").collect(Collectors.joining()));
@@ -173,21 +174,35 @@ public class CommonUtils {
 			}
 		}
 		if (view.getAuditories().size() != 0) {
+			boolean first = true;
 			for (String auditoryAddress : view.getAuditories()) {
+				if (first) {
+					first = false;
+				} else {
+					out.append(", ");
+				}
 				String building = auditoryAddress.split("\\|")[0];
 				String auditory = auditoryAddress.split("\\|")[1];
-				out.append(String.format("ауд.%s, к.%s, ",
+				out.append(String.format("ауд.%s, к.%s",
 						auditory, building));
 			}
 		}
-		out.append(subgroup ? " " + properties.getSingleSubgroupEmoji() : "") // is subgroup separated from another
-				.append(view.isCrossPair() ? " " + properties.getCrossPairEmoji() : ""); // is cross-pair
+		if (showEmoji) {
+			out.append(subgroup ? " " + properties.getSingleSubgroupEmoji() : "") // is subgroup separated from another
+					.append(view.isCrossPair() ? " " + properties.getCrossPairEmoji() : ""); // is cross-pair
+		}
 		if (detailed && showTeachers && view.getTeachersNames().size() != 0) {
 //			out.append(String.format("\n" + TEACHER_EMOJI + " %s %s\n",
 //					mirror.getTeacherTitle(), mirror.getTeacherName()));
 			out.append('\n').append(properties.getTeacherEmoji()).append(' ');
+			boolean first = true;
 			for (Pair<String, String> pair : view.getTeachersNames()) {
-				out.append(pair.getSecond()).append(", ").append(pair.getFirst()).append("; ");
+				if (first) {
+					first = false;
+				} else {
+					out.append("; ");
+				}
+				out.append(pair.getFirst());
 			}
 		}
 		if (showGroups) {

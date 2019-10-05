@@ -7,6 +7,7 @@ import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetScheduleOfTeacherForWeekResponse;
 import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.FindTeacherStageStringsConfigProperties;
+import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
 import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
@@ -82,7 +84,8 @@ public class FindTeacherStage implements Stage {
 						messageOutput.sendMessage(message.getUserId(), properties.getChooseTeacher(),
 								messageOutput.createKeyboard(true,
 										response.getTeachers().stream()
-												.map(name -> new KeyboardButton(KeyboardButton.Color.SECONDARY, name))
+												.sorted()
+										.map(name -> new KeyboardButton(KeyboardButton.Color.SECONDARY, name))
 												.collect(Collectors.toList()).toArray(new KeyboardButton[]{})));
 					}
 				})
@@ -100,11 +103,18 @@ public class FindTeacherStage implements Stage {
 		}
 		restComponent.getTeacherWeekSchedule(teacherName)
 				.thenAccept(response -> {
-					StringBuilder sb = new StringBuilder(String.format(properties.getResultHeader(), teacherName) + '\n');
+					Optional<LessonCellMirror> anyCell = response.getSchedules().stream()
+							.flatMap(schedule -> schedule.getCells().stream()).findFirst();
+					StringBuilder sb = new StringBuilder(String.format(properties.getResultHeader(), teacherName));
+					;
+					if (anyCell.isPresent() && anyCell.get().getTeacherTitle() != null) {
+						sb.append(", ").append(anyCell.get().getTeacherTitle());
+					}
+					sb.append('\n');
 					boolean today = response.getSchedules().get(0).getDayOfWeek() == LocalDate.now().getDayOfWeek();
 					for (GetScheduleOfTeacherForWeekResponse.Schedule schedule : response.getSchedules()) {
 						sb.append(commonUtils.convertLessonCells(schedule.getDayOfWeek(), schedule.getSign(),
-								today, schedule.getCells(), false, false, true));
+								today, schedule.getCells(), false, false, true, true));
 						today = false;
 					}
 					messageOutput.sendMessage(message.getUserId(),

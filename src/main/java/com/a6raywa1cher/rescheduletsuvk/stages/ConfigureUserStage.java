@@ -5,6 +5,7 @@ import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
+import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
 import com.a6raywa1cher.rescheduletsuvk.config.AppConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.ConfigureUserStageStringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
@@ -249,11 +250,13 @@ public class ConfigureUserStage implements Stage {
 									messageOutput.sendMessage(message.getUserId(),
 											(mirror2 != null ? stringProperties.getChooseSubgroup() :
 													stringProperties.getChooseSubgroupWindow()) + "\n" +
-													String.format("%s (%s)",
+													(mirror1.getWeekSign() != WeekSign.ANY ? String.format("%s (%s)\n",
 															mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
-																	Locale.forLanguageTag("ru-RU")),
-															mirror1.getWeekSign().getPrettyString()) +
-													commonUtils.convertLessonCell(mirror1, false, true),
+																	Locale.forLanguageTag("ru-RU")).toUpperCase(), mirror1.getWeekSign()) :
+															mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
+																	Locale.forLanguageTag("ru-RU")).toUpperCase() + "\n"
+													) +
+													commonUtils.convertLessonCell(mirror1, false, true, true, false, false),
 											messageOutput.createKeyboard(true,
 													new KeyboardButton(KeyboardButton.Color.POSITIVE, stringProperties.getYes(),
 															objectMapper.createObjectNode()
