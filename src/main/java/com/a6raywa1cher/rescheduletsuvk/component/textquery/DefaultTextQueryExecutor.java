@@ -1,9 +1,10 @@
 package com.a6raywa1cher.rescheduletsuvk.component.textquery;
 
+import com.a6raywa1cher.rescheduletsuvk.component.DefaultKeyboardsComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
-import com.a6raywa1cher.rescheduletsuvk.config.StringsConfigProperties;
+import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.StringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.FacultyService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.concurrent.CompletionStage;
 
-import static com.a6raywa1cher.rescheduletsuvk.stages.MainMenuStage.getDefaultKeyboard;
 import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.GROUPS_EMOJI;
 
 @Component
@@ -26,14 +26,17 @@ public class DefaultTextQueryExecutor implements TextQueryExecutor {
 	private ScheduleService scheduleService;
 	private StringsConfigProperties properties;
 	private FacultyService facultyService;
+	private DefaultKeyboardsComponent defaultKeyboardsComponent;
 
 	@Autowired
 	public DefaultTextQueryExecutor(MessageOutput messageOutput, ScheduleService scheduleService,
-	                                StringsConfigProperties properties, FacultyService facultyService) {
+	                                StringsConfigProperties properties, FacultyService facultyService,
+	                                DefaultKeyboardsComponent defaultKeyboardsComponent) {
 		this.messageOutput = messageOutput;
 		this.scheduleService = scheduleService;
 		this.properties = properties;
 		this.facultyService = facultyService;
+		this.defaultKeyboardsComponent = defaultKeyboardsComponent;
 	}
 
 	@Override
@@ -44,13 +47,13 @@ public class DefaultTextQueryExecutor implements TextQueryExecutor {
 				.thenAccept(response -> {
 					if (response.isEmpty()) {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
-								"Пары не найдены", getDefaultKeyboard(messageOutput, properties));
+								"Пары не найдены", defaultKeyboardsComponent.mainMenuStage());
 					} else {
 						String prepared = GROUPS_EMOJI + ' ' +
 								findGroup.toCompletableFuture().getNow(null).getName() + ' ' +
 								response.get();
 						messageOutput.sendMessage(extendedMessage.getUserId(),
-								prepared, getDefaultKeyboard(messageOutput, properties));
+								prepared, defaultKeyboardsComponent.mainMenuStage());
 					}
 				})
 				.exceptionally(e -> {

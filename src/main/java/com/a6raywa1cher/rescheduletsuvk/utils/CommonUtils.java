@@ -2,7 +2,7 @@ package com.a6raywa1cher.rescheduletsuvk.utils;
 
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
-import com.a6raywa1cher.rescheduletsuvk.config.StringsConfigProperties;
+import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.StringsConfigProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;

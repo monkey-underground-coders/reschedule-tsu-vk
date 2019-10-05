@@ -1,4 +1,4 @@
-package com.a6raywa1cher.rescheduletsuvk.config;
+package com.a6raywa1cher.rescheduletsuvk.config.stringconfigs;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 
 @Component
 @PropertySource(value = "classpath:strings.properties", encoding = "UTF-8")
@@ -34,7 +36,8 @@ public class StringsConfigProperties {
 	private String arrowRightEmoji;
 	@NotBlank
 	private String groupsEmoji;
-	@NotBlank
+	@NotNull
+	@Size(min = 10, max = 10)
 	private String[] digits;
 
 	// regex
@@ -46,34 +49,4 @@ public class StringsConfigProperties {
 	private String groupRegexp;
 	@NotBlank
 	private String courseRegexp;
-
-	// WelcomeStage
-	@NotBlank
-	private String welcome;
-
-	// RawScheduleStage
-	@NotBlank
-	private String chooseWeekSign;
-	@NotBlank
-	private String currentWeek;
-	@NotBlank
-	private String nextWeek;
-
-	// MainMenuStage
-	@NotBlank
-	private String getSevenDays;
-	@NotBlank
-	private String getTodayLessons;
-	@NotBlank
-	private String getTomorrowLessons;
-	@NotBlank
-	private String getNextLesson;
-	@NotBlank
-	private String getTeacherLessons;
-	@NotBlank
-	private String getRawSchedule;
-	@NotBlank
-	private String dropSettings;
-	@NotBlank
-	private String getInfo;
 }

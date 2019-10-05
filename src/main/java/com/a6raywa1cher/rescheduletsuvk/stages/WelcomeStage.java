@@ -3,7 +3,7 @@ package com.a6raywa1cher.rescheduletsuvk.stages;
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
-import com.a6raywa1cher.rescheduletsuvk.config.StringsConfigProperties;
+import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.WelcomeStageStringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -16,11 +16,11 @@ public class WelcomeStage implements PrimaryStage {
 	private MessageRouter messageRouter;
 	private UserInfoService service;
 	private MessageOutput messageOutput;
-	private StringsConfigProperties properties;
+	private WelcomeStageStringsConfigProperties properties;
 
 	@Autowired
 	public WelcomeStage(MessageRouter messageRouter, UserInfoService service, MessageOutput messageOutput,
-	                    StringsConfigProperties properties) {
+	                    WelcomeStageStringsConfigProperties properties) {
 		this.messageRouter = messageRouter;
 		this.service = service;
 		this.messageOutput = messageOutput;

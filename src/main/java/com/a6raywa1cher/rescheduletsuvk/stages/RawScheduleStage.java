@@ -1,12 +1,13 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
+import com.a6raywa1cher.rescheduletsuvk.component.DefaultKeyboardsComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
-import com.a6raywa1cher.rescheduletsuvk.config.StringsConfigProperties;
+import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.RawScheduleStageStringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
@@ -34,20 +35,23 @@ public class RawScheduleStage implements Stage {
 	private MessageOutput messageOutput;
 	private MessageRouter messageRouter;
 	private RtsServerRestComponent restComponent;
-	private StringsConfigProperties properties;
+	private RawScheduleStageStringsConfigProperties properties;
 	private UserInfoService service;
 	private CommonUtils commonUtils;
+	private DefaultKeyboardsComponent defaultKeyboardsComponent;
 
 	@Autowired
 	public RawScheduleStage(MessageOutput messageOutput, MessageRouter messageRouter,
-	                        RtsServerRestComponent restComponent, StringsConfigProperties properties,
-	                        UserInfoService service, CommonUtils commonUtils) {
+	                        RtsServerRestComponent restComponent, RawScheduleStageStringsConfigProperties properties,
+	                        UserInfoService service, CommonUtils commonUtils,
+	                        DefaultKeyboardsComponent defaultKeyboardsComponent) {
 		this.messageOutput = messageOutput;
 		this.messageRouter = messageRouter;
 		this.restComponent = restComponent;
 		this.properties = properties;
 		this.service = service;
 		this.commonUtils = commonUtils;
+		this.defaultKeyboardsComponent = defaultKeyboardsComponent;
 	}
 
 	private String toPayload(WeekSign weekSign) {
@@ -115,7 +119,7 @@ public class RawScheduleStage implements Stage {
 								sorted.get(dayOfWeek), false));
 					}
 					messageOutput.sendMessage(message.getUserId(), sb.toString(),
-							MainMenuStage.getDefaultKeyboard(messageOutput, properties));
+							defaultKeyboardsComponent.mainMenuStage());
 				})
 				.exceptionally(e -> {
 					log.error("Get raw schedule error\n" + message.toString() + "\n", e);

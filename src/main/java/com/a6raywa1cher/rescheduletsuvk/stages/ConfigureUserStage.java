@@ -6,6 +6,7 @@ import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.config.AppConfigProperties;
+import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.ConfigureUserStageStringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.FacultyService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
@@ -38,7 +39,6 @@ import java.util.stream.Collectors;
 
 import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
 import static com.a6raywa1cher.rescheduletsuvk.stages.ConfigureUserStage.NAME;
-import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.ARROW_DOWN_EMOJI;
 
 @Component(NAME)
 public class ConfigureUserStage implements Stage {
@@ -55,6 +55,7 @@ public class ConfigureUserStage implements Stage {
 	private UserInfoService service;
 	private MessageRouter messageRouter;
 	private AppConfigProperties properties;
+	private ConfigureUserStageStringsConfigProperties stringProperties;
 	private ScheduleService scheduleService;
 	private FacultyService facultyService;
 	private CommonUtils commonUtils;
@@ -62,12 +63,13 @@ public class ConfigureUserStage implements Stage {
 	@Autowired
 	public ConfigureUserStage(MessageOutput messageOutput, UserInfoService service,
 	                          MessageRouter messageRouter, AppConfigProperties properties,
-	                          ScheduleService scheduleService, FacultyService facultyService,
-	                          CommonUtils commonUtils) {
+	                          ConfigureUserStageStringsConfigProperties stringProperties, ScheduleService scheduleService,
+	                          FacultyService facultyService, CommonUtils commonUtils) {
 		this.messageOutput = messageOutput;
 		this.service = service;
 		this.messageRouter = messageRouter;
 		this.properties = properties;
+		this.stringProperties = stringProperties;
 		this.scheduleService = scheduleService;
 		this.facultyService = facultyService;
 		this.commonUtils = commonUtils;
@@ -102,8 +104,7 @@ public class ConfigureUserStage implements Stage {
 												.toString()));
 							});
 					messageOutput.sendMessage(message.getUserId(),
-							"Если факультет - красный, то, возможно, у него некорректное расписание\n" +
-									ARROW_DOWN_EMOJI + "Выбери свой, если он присутствует" + ARROW_DOWN_EMOJI,
+							stringProperties.getChooseFaculty(),
 							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
 					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 2));
 				})
@@ -138,7 +139,7 @@ public class ConfigureUserStage implements Stage {
 									.toString()))
 							.collect(Collectors.toList());
 					messageOutput.sendMessage(message.getUserId(),
-							ARROW_DOWN_EMOJI + "Хорошо, теперь выбери, где ты учишься" + ARROW_DOWN_EMOJI,
+							stringProperties.getChooseLevel(),
 							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
 					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 3));
 				})
@@ -171,7 +172,7 @@ public class ConfigureUserStage implements Stage {
 									.toString()))
 							.collect(Collectors.toList());
 					messageOutput.sendMessage(message.getUserId(),
-							ARROW_DOWN_EMOJI + "Окей, теперь курс?" + ARROW_DOWN_EMOJI,
+							stringProperties.getChooseCourse(),
 							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
 					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 4));
 				})
@@ -210,7 +211,7 @@ public class ConfigureUserStage implements Stage {
 											.toString()))
 							.collect(Collectors.toList());
 					messageOutput.sendMessage(message.getUserId(),
-							ARROW_DOWN_EMOJI + "Прекрасно, последний шаг. Твоя группа?" + ARROW_DOWN_EMOJI,
+							stringProperties.getChooseGroup(),
 							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
 					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 5));
 				})
@@ -246,20 +247,20 @@ public class ConfigureUserStage implements Stage {
 									LessonCellMirror mirror1 = diff.getFirst();
 									LessonCellMirror mirror2 = diff.getSecond();
 									messageOutput.sendMessage(message.getUserId(),
-											"Упс, не последний. Известно, что у этой группы есть подгруппы.\n" +
-													"Есть ли у тебя вот эта пара?" + (mirror2 != null ? "" : "(у другой подгруппы окно)") + "\n" +
+											(mirror2 != null ? stringProperties.getChooseSubgroup() :
+													stringProperties.getChooseSubgroupWindow()) + "\n" +
 													String.format("%s (%s)",
 															mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
 																	Locale.forLanguageTag("ru-RU")),
 															mirror1.getWeekSign().getPrettyString()) +
 													commonUtils.convertLessonCell(mirror1, false, true),
 											messageOutput.createKeyboard(true,
-													new KeyboardButton(KeyboardButton.Color.POSITIVE, "Да",
+													new KeyboardButton(KeyboardButton.Color.POSITIVE, stringProperties.getYes(),
 															objectMapper.createObjectNode()
 																	.put(ROUTE, NAME)
 																	.put("subgroup", diff.getFirstSubgroup())
 																	.toString()),
-													new KeyboardButton(KeyboardButton.Color.NEGATIVE, "Нет",
+													new KeyboardButton(KeyboardButton.Color.NEGATIVE, stringProperties.getNo(),
 															objectMapper.createObjectNode()
 																	.put(ROUTE, NAME)
 																	.put("subgroup", diff.getSecondSubgroup())
@@ -284,7 +285,7 @@ public class ConfigureUserStage implements Stage {
 		JsonNode jsonNode = objectMapper.readTree(message.getPayload());
 		int subgroup = jsonNode.get("subgroup").asInt();
 		messageOutput.sendMessage(message.getUserId(),
-				"Твоя подгруппа:" + subgroup);
+				String.format(stringProperties.getSubgroupNotify(), subgroup));
 		userInfo.setSubgroup(subgroup);
 		registerUser(message, userInfo);
 	}
@@ -292,7 +293,7 @@ public class ConfigureUserStage implements Stage {
 	private void registerUser(ExtendedMessage message, UserInfo userInfo) {
 		service.save(userInfo);
 		log.info("Registered user {} with faculty {}, group {} and subgroup {}", message.getUserId(), userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup());
-		messageOutput.sendMessage(message.getUserId(), "Всё настроено!");
+		messageOutput.sendMessage(message.getUserId(), stringProperties.getSuccess());
 		userInfoLoadingCache.invalidate(message.getUserId());
 		messageRouter.routeMessageTo(message, MainMenuStage.NAME);
 	}

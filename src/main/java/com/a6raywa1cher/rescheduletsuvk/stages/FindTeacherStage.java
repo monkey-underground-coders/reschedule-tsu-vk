@@ -1,11 +1,12 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
+import com.a6raywa1cher.rescheduletsuvk.component.DefaultKeyboardsComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetScheduleOfTeacherForWeekResponse;
-import com.a6raywa1cher.rescheduletsuvk.config.StringsConfigProperties;
+import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.FindTeacherStageStringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
 import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,8 +22,6 @@ import java.util.stream.Collectors;
 
 import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
 import static com.a6raywa1cher.rescheduletsuvk.stages.FindTeacherStage.NAME;
-import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.ARROW_DOWN_EMOJI;
-import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.TEACHER_EMOJI;
 
 @Component(NAME)
 public class FindTeacherStage implements Stage {
@@ -30,22 +29,24 @@ public class FindTeacherStage implements Stage {
 	private static final Logger log = LoggerFactory.getLogger(FindTeacherStage.class);
 	private MessageRouter messageRouter;
 	private MessageOutput messageOutput;
-	private StringsConfigProperties properties;
 	private RtsServerRestComponent restComponent;
 	private CommonUtils commonUtils;
 
 	@Value("${app.strings.teacher-name-regexp}")
 	private String teacherNameRegex;
+	private DefaultKeyboardsComponent defaultKeyboardsComponent;
+	private FindTeacherStageStringsConfigProperties properties;
 
 	@Autowired
 	public FindTeacherStage(MessageRouter messageRouter, MessageOutput messageOutput,
-	                        StringsConfigProperties properties, RtsServerRestComponent restComponent,
-	                        CommonUtils commonUtils) {
+	                        FindTeacherStageStringsConfigProperties properties, RtsServerRestComponent restComponent,
+	                        CommonUtils commonUtils, DefaultKeyboardsComponent defaultKeyboardsComponent) {
 		this.messageRouter = messageRouter;
 		this.messageOutput = messageOutput;
 		this.properties = properties;
 		this.restComponent = restComponent;
 		this.commonUtils = commonUtils;
+		this.defaultKeyboardsComponent = defaultKeyboardsComponent;
 	}
 
 	private String getKeyboard() {
@@ -53,39 +54,36 @@ public class FindTeacherStage implements Stage {
 				.put(ROUTE, NAME)
 				.toString();
 		return messageOutput.createKeyboard(false, new KeyboardButton(KeyboardButton.Color.NEGATIVE,
-				"Выйти", basicPayload));
+				properties.getExit(), basicPayload));
 	}
 
 	private void step1(ExtendedMessage message) {
 		messageOutput.sendMessage(message.getUserId(),
-				"Нужно найти преподавателя? Давай попробуем найти. \n" +
-						"Учти, что это - выборка из расписания, ни больше, ни меньше. ¯\\_(ツ)_/¯\n" +
-						"Дается расписание на 7 рабочих дней\n" +
-						ARROW_DOWN_EMOJI + "Введи фамилию или всё ФИО" + ARROW_DOWN_EMOJI,
+				properties.getIntro(),
 				getKeyboard());
 	}
 
 	private void step2(ExtendedMessage message) {
 		if (!message.getBody().matches(teacherNameRegex)) {
-			messageOutput.sendMessage(message.getUserId(), "Некорректное имя преподавателя", getKeyboard());
+			messageOutput.sendMessage(message.getUserId(), properties.getInvalidName(), getKeyboard());
 			return;
 		}
 		restComponent.findTeacher(message.getBody())
 				.thenAccept(response -> {
 					if (response.getTeachers() == null || response.getTeachers().isEmpty()) {
-						messageOutput.sendMessage(message.getUserId(), "Преподаватель не найден", getKeyboard());
+						messageOutput.sendMessage(message.getUserId(), properties.getInvalidName(), getKeyboard());
 //						returnToMainMenu(message, false);
 					} else if (response.getTeachers().size() == 1) {
 						step3(message, response.getTeachers().get(0));
 					} else if (response.getTeachers().size() > 16) {
 						messageOutput.sendMessage(message.getUserId(),
-								"Слишком много преподавателей, уточни запрос", getKeyboard());
+								properties.getTooManyTeachersInResult(), getKeyboard());
 					} else {
-						messageOutput.sendMessage(message.getUserId(), "Найдено несколько преподователей," +
-								"выбери нужного", messageOutput.createKeyboard(true,
-								response.getTeachers().stream()
-										.map(name -> new KeyboardButton(KeyboardButton.Color.SECONDARY, name))
-										.collect(Collectors.toList()).toArray(new KeyboardButton[]{})));
+						messageOutput.sendMessage(message.getUserId(), properties.getChooseTeacher(),
+								messageOutput.createKeyboard(true,
+										response.getTeachers().stream()
+												.map(name -> new KeyboardButton(KeyboardButton.Color.SECONDARY, name))
+												.collect(Collectors.toList()).toArray(new KeyboardButton[]{})));
 					}
 				})
 				.exceptionally(e -> {
@@ -97,12 +95,12 @@ public class FindTeacherStage implements Stage {
 
 	private void step3(ExtendedMessage message, String teacherName) {
 		if (!message.getBody().matches(teacherNameRegex)) {
-			messageOutput.sendMessage(message.getUserId(), "Некорректное имя преподавателя", getKeyboard());
+			messageOutput.sendMessage(message.getUserId(), properties.getInvalidName(), getKeyboard());
 			return;
 		}
 		restComponent.getTeacherWeekSchedule(teacherName)
 				.thenAccept(response -> {
-					StringBuilder sb = new StringBuilder(TEACHER_EMOJI + ' ' + teacherName + '\n');
+					StringBuilder sb = new StringBuilder(String.format(properties.getResultHeader(), teacherName) + '\n');
 					boolean today = response.getSchedules().get(0).getDayOfWeek() == LocalDate.now().getDayOfWeek();
 					for (GetScheduleOfTeacherForWeekResponse.Schedule schedule : response.getSchedules()) {
 						sb.append(commonUtils.convertLessonCells(schedule.getDayOfWeek(), schedule.getSign(),
@@ -110,7 +108,7 @@ public class FindTeacherStage implements Stage {
 						today = false;
 					}
 					messageOutput.sendMessage(message.getUserId(),
-							sb.toString(), MainMenuStage.getDefaultKeyboard(messageOutput, properties));
+							sb.toString(), defaultKeyboardsComponent.mainMenuStage());
 					returnToMainMenu(message, true);
 				})
 				.exceptionally(e -> {
@@ -129,7 +127,7 @@ public class FindTeacherStage implements Stage {
 
 	@Override
 	public void accept(ExtendedMessage message) {
-		if (message.getBody().equals("Выйти")) {
+		if (message.getBody().equals(properties.getExit())) {
 			returnToMainMenu(message, false);
 		} else if (messageRouter.link(message.getUserId(), this)) {
 			step1(message);
