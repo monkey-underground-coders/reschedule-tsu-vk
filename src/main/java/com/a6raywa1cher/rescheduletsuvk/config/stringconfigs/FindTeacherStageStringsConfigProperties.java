@@ -26,4 +26,8 @@ public class FindTeacherStageStringsConfigProperties {
 	private String exit;
 	@NotBlank
 	private String resultHeader;
+	@NotBlank
+	private String teacherTitlePlaceholder;
+	@NotBlank
+	private String noLessonsFound;
 }

@@ -192,8 +192,6 @@ public class CommonUtils {
 					.append(view.isCrossPair() ? " " + properties.getCrossPairEmoji() : ""); // is cross-pair
 		}
 		if (detailed && showTeachers && view.getTeachersNames().size() != 0) {
-//			out.append(String.format("\n" + TEACHER_EMOJI + " %s %s\n",
-//					mirror.getTeacherTitle(), mirror.getTeacherName()));
 			out.append('\n').append(properties.getTeacherEmoji()).append(' ');
 			boolean first = true;
 			for (Pair<String, String> pair : view.getTeachersNames()) {

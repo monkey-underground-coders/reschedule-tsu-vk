@@ -6,18 +6,20 @@ import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetScheduleOfTeacherForWeekResponse;
-import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.FindTeacherStageStringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
+import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.FindTeacherStageStringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
 import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentry.Sentry;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.text.MessageFormat;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -85,7 +87,7 @@ public class FindTeacherStage implements Stage {
 								messageOutput.createKeyboard(true,
 										response.getTeachers().stream()
 												.sorted()
-										.map(name -> new KeyboardButton(KeyboardButton.Color.SECONDARY, name))
+												.map(name -> new KeyboardButton(KeyboardButton.Color.SECONDARY, name))
 												.collect(Collectors.toList()).toArray(new KeyboardButton[]{})));
 					}
 				})
@@ -104,12 +106,16 @@ public class FindTeacherStage implements Stage {
 		restComponent.getTeacherWeekSchedule(teacherName)
 				.thenAccept(response -> {
 					Optional<LessonCellMirror> anyCell = response.getSchedules().stream()
-							.flatMap(schedule -> schedule.getCells().stream()).findFirst();
-					StringBuilder sb = new StringBuilder(String.format(properties.getResultHeader(), teacherName));
-					;
-					if (anyCell.isPresent() && anyCell.get().getTeacherTitle() != null) {
-						sb.append(", ").append(anyCell.get().getTeacherTitle());
+							.flatMap(schedule -> schedule.getCells().stream()).findAny();
+					if (anyCell.isEmpty()) {
+						messageOutput.sendMessage(message.getUserId(),
+								properties.getNoLessonsFound(), defaultKeyboardsComponent.mainMenuStage());
+						returnToMainMenu(message, true);
+						return;
 					}
+					StringBuilder sb = new StringBuilder(MessageFormat.format(properties.getResultHeader(), teacherName,
+							StringUtils.defaultIfBlank(anyCell.get().getTeacherTitle(), properties.getTeacherTitlePlaceholder())
+					));
 					sb.append('\n');
 					boolean today = response.getSchedules().get(0).getDayOfWeek() == LocalDate.now().getDayOfWeek();
 					for (GetScheduleOfTeacherForWeekResponse.Schedule schedule : response.getSchedules()) {
