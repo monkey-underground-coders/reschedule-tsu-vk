@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.concurrent.CompletionStage;
 
-import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.GROUPS_EMOJI;
 
 @Component
 public class DefaultTextQueryExecutor implements TextQueryExecutor {
@@ -47,9 +46,9 @@ public class DefaultTextQueryExecutor implements TextQueryExecutor {
 				.thenAccept(response -> {
 					if (response.isEmpty()) {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
-								"Пары не найдены", defaultKeyboardsComponent.mainMenuStage());
+								properties.getLessonsNotFound(), defaultKeyboardsComponent.mainMenuStage());
 					} else {
-						String prepared = GROUPS_EMOJI + ' ' +
+						String prepared = properties.getGroupsEmoji() + ' ' +
 								findGroup.toCompletableFuture().getNow(null).getName() + ' ' +
 								response.get();
 						messageOutput.sendMessage(extendedMessage.getUserId(),

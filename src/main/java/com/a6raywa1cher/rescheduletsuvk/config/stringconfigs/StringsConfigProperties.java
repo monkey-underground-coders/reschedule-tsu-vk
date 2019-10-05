@@ -29,13 +29,9 @@ public class StringsConfigProperties {
 	@NotBlank
 	private String futureLessonEmoji;
 	@NotBlank
-	private String cookiesEmoji;
-	@NotBlank
-	private String arrowDownEmoji;
-	@NotBlank
-	private String arrowRightEmoji;
-	@NotBlank
 	private String groupsEmoji;
+	@NotBlank
+	private String lessonsNotFound;
 	@NotNull
 	@Size(min = 10, max = 10)
 	private String[] digits;

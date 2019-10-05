@@ -18,16 +18,6 @@ import java.util.stream.Collectors;
 
 @Component
 public class CommonUtils {
-	public static final String CROSS_PAIR_EMOJI = "\ud83d\udd17";
-	public static final String SINGLE_SUBGROUP_EMOJI = "\ud83d\udc64";
-	public static final String TEACHER_EMOJI = "\ud83d\udc68\u200d\ud83c\udfeb";
-	public static final String PAST_LESSON_EMOJI = "\u26d4";
-	public static final String LIVE_LESSON_EMOJI = "\u25b6\ufe0f";
-	public static final String FUTURE_LESSON_EMOJI = "\u23f8\ufe0f";
-	public static final String COOKIES_EMOJI = "\uD83C\uDF6A";
-	public static final String ARROW_DOWN_EMOJI = "\u2b07\ufe0f";
-	public static final String ARROW_RIGHT_EMOJI = "\u27a1\ufe0f";
-	public static final String GROUPS_EMOJI = "\uD83D\uDC65";
 	private StringsConfigProperties properties;
 
 	@Autowired
@@ -152,11 +142,11 @@ public class CommonUtils {
 		if (today) {
 			LocalTime localTime = LocalTime.now();
 			if (view.getStart().isBefore(localTime) && view.getEnd().isAfter(localTime)) { // live lesson
-				out.append(LIVE_LESSON_EMOJI);
+				out.append(properties.getLiveLessonEmoji());
 			} else if (view.getStart().isAfter(localTime)) { // not yet live
-				out.append(FUTURE_LESSON_EMOJI);
+				out.append(properties.getFutureLessonEmoji());
 			} else { // already passed
-				out.append(PAST_LESSON_EMOJI);
+				out.append(properties.getPastLessonEmoji());
 			}
 		}
 		out.append(String.format(" (%s - %s) ",
@@ -190,18 +180,18 @@ public class CommonUtils {
 						auditory, building));
 			}
 		}
-		out.append(subgroup ? " " + SINGLE_SUBGROUP_EMOJI : "") // is subgroup separated from another
-				.append(view.isCrossPair() ? " " + CROSS_PAIR_EMOJI : ""); // is cross-pair
+		out.append(subgroup ? " " + properties.getSingleSubgroupEmoji() : "") // is subgroup separated from another
+				.append(view.isCrossPair() ? " " + properties.getCrossPairEmoji() : ""); // is cross-pair
 		if (detailed && showTeachers && view.getTeachersNames().size() != 0) {
 //			out.append(String.format("\n" + TEACHER_EMOJI + " %s %s\n",
 //					mirror.getTeacherTitle(), mirror.getTeacherName()));
-			out.append('\n').append(TEACHER_EMOJI).append(' ');
+			out.append('\n').append(properties.getTeacherEmoji()).append(' ');
 			for (Pair<String, String> pair : view.getTeachersNames()) {
 				out.append(pair.getSecond()).append(", ").append(pair.getFirst()).append("; ");
 			}
 		}
 		if (showGroups) {
-			out.append('\n').append(GROUPS_EMOJI).append(' ');
+			out.append('\n').append(properties.getGroupsEmoji()).append(' ');
 			boolean first = true;
 			for (Pair<String, Integer> pair : view.getGroupsAndSubgroups()) {
 				if (first) {
