@@ -1,14 +1,14 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
+import com.a6raywa1cher.rescheduletsuvk.component.DefaultKeyboardsComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.textquery.TextQueryProcessor;
+import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.MainMenuStageStringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
-import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,53 +19,32 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
 import static com.a6raywa1cher.rescheduletsuvk.stages.MainMenuStage.NAME;
-import static com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils.*;
 
 @Component(NAME)
 public class MainMenuStage implements Stage {
 	public static final String NAME = "mainMenuStage";
-	private static final String GET_SEVEN_DAYS = "Расписание на 7 дней";
-	private static final String GET_TODAY_LESSONS = "Какие сегодня пары?";
-	private static final String GET_TOMORROW_LESSONS = "Какие пары завтра (или в ПН)?";
-	private static final String GET_NEXT_LESSON = "Какая следующая пара?";
-	private static final String GET_TEACHER_LESSONS = "Расписание преподавателя";
-	private static final String GET_RAW_SCHEDULE = "Недельное расписание";
-	private static final String DROP_SETTINGS = "Изменить группу";
-	private static final String GET_INFO = "Информация";
 	private static final Logger log = LoggerFactory.getLogger(MainMenuStage.class);
 	private MessageOutput messageOutput;
 	private MessageRouter messageRouter;
 	private UserInfoService service;
 	private ScheduleService scheduleService;
 	private TextQueryProcessor textQueryProcessor;
+	private MainMenuStageStringsConfigProperties properties;
+	private DefaultKeyboardsComponent defaultKeyboardsComponent;
 
 	@Autowired
 	public MainMenuStage(MessageOutput messageOutput, MessageRouter messageRouter,
-	                     UserInfoService service, ScheduleService scheduleService, TextQueryProcessor textQueryProcessor) {
+	                     UserInfoService service, ScheduleService scheduleService,
+	                     TextQueryProcessor textQueryProcessor, MainMenuStageStringsConfigProperties properties,
+	                     DefaultKeyboardsComponent defaultKeyboardsComponent) {
 		this.messageOutput = messageOutput;
 		this.messageRouter = messageRouter;
 		this.service = service;
 		this.scheduleService = scheduleService;
 		this.textQueryProcessor = textQueryProcessor;
-	}
-
-	public static String getDefaultKeyboard(MessageOutput messageOutput) {
-		ObjectMapper objectMapper = new ObjectMapper();
-		String basicPayload = objectMapper.createObjectNode()
-				.put(ROUTE, NAME)
-				.toString();
-		return messageOutput.createKeyboard(false, new int[]{1, 1, 1, 1, 2, 2},
-				new KeyboardButton(KeyboardButton.Color.PRIMARY, GET_SEVEN_DAYS, basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_TODAY_LESSONS, basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_NEXT_LESSON, basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_TOMORROW_LESSONS, basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_TEACHER_LESSONS, basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_RAW_SCHEDULE, basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, DROP_SETTINGS, basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, GET_INFO, basicPayload)
-		);
+		this.properties = properties;
+		this.defaultKeyboardsComponent = defaultKeyboardsComponent;
 	}
 
 	private void getSevenDays(UserInfo userInfo, ExtendedMessage message) {
@@ -73,7 +52,7 @@ public class MainMenuStage implements Stage {
 				LocalDate.now())
 				.thenAccept(schedule -> {
 					messageOutput.sendMessage(message.getUserId(),
-							schedule, getDefaultKeyboard(messageOutput));
+							schedule, defaultKeyboardsComponent.mainMenuStage());
 				})
 				.exceptionally(e -> {
 					log.error("Get seven days error\n" + message.toString() + "\n", e);
@@ -87,12 +66,12 @@ public class MainMenuStage implements Stage {
 				.thenAccept(optional -> {
 					if (optional.isEmpty()) {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
-								"Сегодня нет пар! Отдыхай, студент",
-								getDefaultKeyboard(messageOutput));
+								properties.getNoLessonsToday(),
+								defaultKeyboardsComponent.mainMenuStage());
 					} else {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
 								optional.get(),
-								getDefaultKeyboard(messageOutput));
+								defaultKeyboardsComponent.mainMenuStage());
 					}
 				})
 				.exceptionally(e -> {
@@ -107,12 +86,12 @@ public class MainMenuStage implements Stage {
 				.thenAccept(optional -> {
 					if (optional.isEmpty()) {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
-								"Больше сегодня пар не ожидается",
-								getDefaultKeyboard(messageOutput));
+								properties.getNoNextLessonsToday(),
+								defaultKeyboardsComponent.mainMenuStage());
 					} else {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
 								optional.get(),
-								getDefaultKeyboard(messageOutput));
+								defaultKeyboardsComponent.mainMenuStage());
 					}
 				})
 				.exceptionally(e -> {
@@ -142,13 +121,13 @@ public class MainMenuStage implements Stage {
 				.thenAccept(optional -> {
 					if (optional.isEmpty()) {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
-								finalIsDayAfterTomorrow ? "Послезавтра нет пар! Отдыхай, студент" :
-										"Завтра нет пар! Отдыхай, студент",
-								getDefaultKeyboard(messageOutput));
+								finalIsDayAfterTomorrow ? properties.getNoLessonsAtMonday() :
+										properties.getNoTomorrowPairs(),
+								defaultKeyboardsComponent.mainMenuStage());
 					} else {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
 								optional.get(),
-								getDefaultKeyboard(messageOutput));
+								defaultKeyboardsComponent.mainMenuStage());
 					}
 				})
 				.exceptionally(e -> {
@@ -173,12 +152,11 @@ public class MainMenuStage implements Stage {
 
 	private void greeting(UserInfo userInfo, ExtendedMessage message) {
 		messageOutput.sendMessage(message.getUserId(),
-				"Главное меню. Тут уютно, есть печеньки. " + COOKIES_EMOJI + '\n' +
-						"Настроена " + userInfo.getGroupId() + " группа" +
-						(userInfo.getSubgroup() != null ? ", " + userInfo.getSubgroup() + " подгруппа" : "") + '\n' +
-						"Условные обозначения: \n" +
-						CROSS_PAIR_EMOJI + " - пара у нескольких групп, \n" +
-						SINGLE_SUBGROUP_EMOJI + " - пара только у одной из подгрупп.", getDefaultKeyboard(messageOutput));
+				userInfo.getSubgroup() != null ?
+						String.format(properties.getGreetingWithSubgroup(),
+								userInfo.getGroupId(), userInfo.getSubgroup()) :
+						String.format(properties.getGreeting(), userInfo.getGroupId()),
+				defaultKeyboardsComponent.mainMenuStage());
 	}
 
 	private void getTeacherLessons(ExtendedMessage message) {
@@ -193,31 +171,23 @@ public class MainMenuStage implements Stage {
 			return;
 		}
 		if (message.getPayload() != null) {
-			switch (message.getBody()) {
-				case GET_SEVEN_DAYS:
-					getSevenDays(optionalUserInfo.get(), message);
-					break;
-				case GET_TODAY_LESSONS:
-					getTodayLessons(optionalUserInfo.get(), message);
-					break;
-				case GET_TOMORROW_LESSONS:
-					getTomorrowLessons(optionalUserInfo.get(), message);
-					break;
-				case GET_NEXT_LESSON:
-					getNextLesson(optionalUserInfo.get(), message);
-					break;
-				case DROP_SETTINGS:
-					dropSettings(optionalUserInfo.get(), message);
-					break;
-				case GET_TEACHER_LESSONS:
-					getTeacherLessons(message);
-					break;
-				case GET_RAW_SCHEDULE:
-					getRawSchedule(message);
-					break;
-				case GET_INFO:
-				default:
-					greeting(optionalUserInfo.get(), message);
+			String body = message.getBody();
+			if (properties.getGetSevenDays().equals(body)) {
+				getSevenDays(optionalUserInfo.get(), message);
+			} else if (properties.getGetTodayLessons().equals(body)) {
+				getTodayLessons(optionalUserInfo.get(), message);
+			} else if (properties.getGetTomorrowLessons().equals(body)) {
+				getTomorrowLessons(optionalUserInfo.get(), message);
+			} else if (properties.getGetNextLesson().equals(body)) {
+				getNextLesson(optionalUserInfo.get(), message);
+			} else if (properties.getDropSettings().equals(body)) {
+				dropSettings(optionalUserInfo.get(), message);
+			} else if (properties.getGetTeacherLessons().equals(body)) {
+				getTeacherLessons(message);
+			} else if (properties.getGetRawSchedule().equals(body)) {
+				getRawSchedule(message);
+			} else {
+				greeting(optionalUserInfo.get(), message);
 			}
 		} else if (!textQuery(optionalUserInfo.get(), message)) {
 			greeting(optionalUserInfo.get(), message);
