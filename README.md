@@ -1,11 +1,12 @@
 # reschedule-tsu-vk
-Unofficial vk bot for TvSU schedule, vk.com endpoint. Works with [reschedule-tsu-spring](https://github.com/monkey-underground-coders/reschedule-tsu-spring) as backend.  
-Built using official [VK Java SDK](https://github.com/VKCOM/vk-java-sdk), [Spring Boot](https://spring.io), [DialogFlow](https://dialogflow.com) and [Sentry](https://sentry.io).
+Unofficial vk bot for TvSU schedule, vk.com endpoint. 
+This bot works with [reschedule-tsu-spring](https://github.com/monkey-underground-coders/reschedule-tsu-spring).  
+Built using [VK Java SDK](https://github.com/VKCOM/vk-java-sdk), [Spring Boot](https://spring.io), [DialogFlow](https://dialogflow.com) and [Sentry](https://sentry.io).
 
 ## Features
 - Schedule for current/next/any day (feat. DialogFlow)
 - Schedule for seven days forward and a whole week
-- Teacher schedule
+- Teacher's schedule
 - Past/Live/Future lessons indication
 - Subgroups support
 
@@ -18,4 +19,4 @@ info@a6raywa1cher.com for the deployed server. Also, deploy PostgreSQL or other 
 4) Run :)
 
 ## Contribution
-Any feature requests, improvements, bug and security reports are welcome! Leave it here or at info@a6raywa1cher.com
+Any feature requests, improvements, bug and security reports are welcome! Leave it here or email me: info@a6raywa1cher.com
