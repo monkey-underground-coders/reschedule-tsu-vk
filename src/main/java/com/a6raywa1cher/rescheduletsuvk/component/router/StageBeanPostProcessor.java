@@ -18,7 +18,7 @@ public class StageBeanPostProcessor implements BeanPostProcessor {
 	}
 
 	@Override
-	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
 		Class<?> aClass = bean.getClass();
 		if (PrimaryStage.class.isAssignableFrom(aClass)) {
 			messageRouter.setPrimaryStage((PrimaryStage) bean);
