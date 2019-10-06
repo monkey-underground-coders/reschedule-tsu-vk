@@ -1,6 +1,7 @@
 package com.a6raywa1cher.rescheduletsuvk.component.textquery;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
+import com.a6raywa1cher.rescheduletsuvk.models.StudentUser;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.google.cloud.dialogflow.v2.*;
 import com.google.protobuf.Value;
@@ -57,13 +58,15 @@ public class DialogFlowTextQueryProcessor implements TextQueryProcessor {
 	}
 
 	private void getPairs(UserInfo userInfo, ExtendedMessage extendedMessage, QueryResult queryResult) {
-		Map<String, Value> map = queryResult.getParameters().getFieldsMap();
-		String group = map.containsKey("group_name") && map.get("group_name").getNumberValue() != 0d ? Integer.toString((int) map.get("group_name").getNumberValue())
-				: userInfo.getGroupId();
-		LocalDateTime localDateTime = map.containsKey("date") ? LocalDateTime.from(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(
-				map.get("date").getStringValue())) : LocalDateTime.now();
-		log.debug("group: {}, ldt:{}", group, localDateTime.toString());
-		textQueryExecutor.getPair(userInfo, extendedMessage, group, localDateTime.toLocalDate());
+		if (userInfo instanceof StudentUser) {
+			Map<String, Value> map = queryResult.getParameters().getFieldsMap();
+			String group = map.containsKey("group_name") && map.get("group_name").getNumberValue() != 0d ? Integer.toString((int) map.get("group_name").getNumberValue())
+					: ((StudentUser) userInfo).getGroupId();
+			LocalDateTime localDateTime = map.containsKey("date") ? LocalDateTime.from(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(
+					map.get("date").getStringValue())) : LocalDateTime.now();
+			log.debug("group: {}, ldt:{}", group, localDateTime.toString());
+			textQueryExecutor.getPair(userInfo, extendedMessage, group, localDateTime.toLocalDate());
+		}
 	}
 
 	@Override

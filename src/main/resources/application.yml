@@ -3,6 +3,7 @@ app:
     group-id: 0
     token: ---
   rts-url: ---
+  primary-faculty: ---
   activate-dialogflow: false
   red-faculties: []
 # ===============================

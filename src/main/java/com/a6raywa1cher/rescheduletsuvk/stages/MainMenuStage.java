@@ -6,6 +6,8 @@ import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.textquery.TextQueryProcessor;
 import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.MainMenuStageStringsConfigProperties;
+import com.a6raywa1cher.rescheduletsuvk.models.StudentUser;
+import com.a6raywa1cher.rescheduletsuvk.models.TeacherUser;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
@@ -48,8 +50,7 @@ public class MainMenuStage implements Stage {
 	}
 
 	private void getSevenDays(UserInfo userInfo, ExtendedMessage message) {
-		scheduleService.getScheduleForSevenDays(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(),
-				LocalDate.now())
+		scheduleService.getScheduleForSevenDays(userInfo, LocalDate.now(), false)
 				.thenAccept(schedule -> {
 					messageOutput.sendMessage(message.getUserId(),
 							schedule, defaultKeyboardsComponent.mainMenuStage());
@@ -62,7 +63,7 @@ public class MainMenuStage implements Stage {
 	}
 
 	private void getTodayLessons(UserInfo userInfo, ExtendedMessage extendedMessage) {
-		scheduleService.getScheduleFor(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), LocalDate.now(), true)
+		scheduleService.getScheduleFor(userInfo, LocalDate.now(), true)
 				.thenAccept(optional -> {
 					if (optional.isEmpty()) {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
@@ -82,7 +83,7 @@ public class MainMenuStage implements Stage {
 	}
 
 	private void getNextLesson(UserInfo userInfo, ExtendedMessage extendedMessage) {
-		scheduleService.getNextLesson(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), LocalDateTime.now())
+		scheduleService.getNextLesson(userInfo, LocalDateTime.now())
 				.thenAccept(optional -> {
 					if (optional.isEmpty()) {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
@@ -117,7 +118,7 @@ public class MainMenuStage implements Stage {
 		}
 		LocalDate finalLocalDate = localDate;
 		boolean finalIsDayAfterTomorrow = isDayAfterTomorrow;
-		scheduleService.getScheduleFor(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), finalLocalDate, false)
+		scheduleService.getScheduleFor(userInfo, finalLocalDate, false)
 				.thenAccept(optional -> {
 					if (optional.isEmpty()) {
 						messageOutput.sendMessage(extendedMessage.getUserId(),
@@ -151,12 +152,20 @@ public class MainMenuStage implements Stage {
 	}
 
 	private void greeting(UserInfo userInfo, ExtendedMessage message) {
-		messageOutput.sendMessage(message.getUserId(),
-				userInfo.getSubgroup() != null ?
-						String.format(properties.getGreetingWithSubgroup(),
-								userInfo.getGroupId(), userInfo.getSubgroup()) :
-						String.format(properties.getGreeting(), userInfo.getGroupId()),
-				defaultKeyboardsComponent.mainMenuStage());
+		if (userInfo instanceof StudentUser) {
+			StudentUser studentUser = (StudentUser) userInfo;
+			messageOutput.sendMessage(message.getUserId(),
+					studentUser.getSubgroup() != null ?
+							String.format(properties.getGreetingWithSubgroup(),
+									studentUser.getGroupId(), studentUser.getSubgroup()) :
+							String.format(properties.getGreeting(), studentUser.getGroupId()),
+					defaultKeyboardsComponent.mainMenuStage());
+		} else {
+			TeacherUser teacherUser = (TeacherUser) userInfo;
+			messageOutput.sendMessage(message.getUserId(),
+					String.format(properties.getTeacherGreeting(), teacherUser.getTeacherName()),
+					defaultKeyboardsComponent.mainMenuStage());
+		}
 	}
 
 	private void getTeacherLessons(ExtendedMessage message) {
@@ -165,7 +174,7 @@ public class MainMenuStage implements Stage {
 
 	@Override
 	public void accept(ExtendedMessage message) {
-		Optional<UserInfo> optionalUserInfo = service.getById(message.getUserId());
+		Optional<? extends UserInfo> optionalUserInfo = service.getById(message.getUserId());
 		if (optionalUserInfo.isEmpty()) {
 			messageRouter.routeMessageTo(message, WelcomeStage.NAME);
 			return;

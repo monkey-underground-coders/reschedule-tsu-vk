@@ -10,10 +10,10 @@ import javax.validation.constraints.NotBlank;
 
 @Component
 @PropertySource(value = "classpath:strings.properties", encoding = "UTF-8")
-@ConfigurationProperties(prefix = "app.strings.configure-user-stage")
+@ConfigurationProperties(prefix = "app.strings.configure-student-user-stage")
 @Data
 @Validated
-public class ConfigureUserStageStringsConfigProperties {
+public class ConfigureStudentUserStageStringsConfigProperties {
 	@NotBlank
 	private String chooseFaculty;
 	@NotBlank

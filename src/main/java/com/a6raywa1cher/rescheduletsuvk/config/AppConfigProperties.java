@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
+import javax.validation.constraints.NotBlank;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,6 +19,9 @@ public class AppConfigProperties {
 	private String rtsUrl;
 
 	private boolean activateDialogFlow = false;
+
+	@NotBlank
+	private String primaryFaculty;
 
 	private Set<String> redFaculties = new HashSet<>();
 }

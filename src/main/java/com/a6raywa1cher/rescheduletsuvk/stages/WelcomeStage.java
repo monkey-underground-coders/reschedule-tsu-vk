@@ -34,7 +34,7 @@ public class WelcomeStage implements PrimaryStage {
 			messageRouter.routeMessageTo(message, MainMenuStage.NAME);
 		} else {
 			messageOutput.sendMessage(message.getUserId(), properties.getWelcome());
-			messageRouter.routeMessageTo(message, ConfigureUserStage.NAME);
+			messageRouter.routeMessageTo(message, ConfigureTeacherUserStage.NAME); // TODO make buttons
 		}
 	}
 

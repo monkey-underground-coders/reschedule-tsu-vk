@@ -91,10 +91,16 @@ public class VkMessageOutput implements MessageOutput {
 		int posInRaw = 0;
 		for (KeyboardButton keyboardButton : buttonsDescriptions) {
 			ObjectNode button = objectMapper.createObjectNode();
+			// groupName.length() >= 40 ? groupName.substring(0, 20) + "..." +
+			// groupName.substring(groupName.length() - 15) : groupName,
 			button.put("color", keyboardButton.getColor().name().toLowerCase());
+			String label = keyboardButton.getLabel();
+			if (label.length() >= 40) {
+				label = label.substring(0, 20) + "..." + label.substring(label.length() - 15);
+			}
 			ObjectNode action = objectMapper.createObjectNode()
 					.put("type", "text")
-					.put("label", keyboardButton.getLabel());
+					.put("label", label);
 			if (keyboardButton.getPayload() != null) {
 				action.put("payload", keyboardButton.getPayload());
 			}
@@ -112,5 +118,10 @@ public class VkMessageOutput implements MessageOutput {
 				.put("one_time", oneTime)
 				.set("buttons", allButtons)
 				.toString();
+	}
+
+	@Override
+	public String getDefaultPayload() {
+		return "{\"buttons\": \"1\"}";
 	}
 }

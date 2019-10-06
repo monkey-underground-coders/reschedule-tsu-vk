@@ -41,5 +41,7 @@ public class MainMenuStageStringsConfigProperties {
 	@NotBlank
 	private String greeting;
 	@NotBlank
+	private String teacherGreeting;
+	@NotBlank
 	private String greetingWithSubgroup;
 }

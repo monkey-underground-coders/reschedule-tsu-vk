@@ -2,15 +2,18 @@ package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.DefaultKeyboardsComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
-import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
+import com.a6raywa1cher.rescheduletsuvk.component.backend.BackendComponent;
+import com.a6raywa1cher.rescheduletsuvk.component.lessoncellrenderer.LessonCellRenderer;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
+import com.a6raywa1cher.rescheduletsuvk.config.AppConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.RawScheduleStageStringsConfigProperties;
+import com.a6raywa1cher.rescheduletsuvk.models.StudentUser;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
+import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
-import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
 import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,23 +37,28 @@ public class RawScheduleStage implements Stage {
 	private static final Logger log = LoggerFactory.getLogger(RawScheduleStage.class);
 	private MessageOutput messageOutput;
 	private MessageRouter messageRouter;
-	private RtsServerRestComponent restComponent;
+	private BackendComponent restComponent;
+	private ScheduleService scheduleService;
 	private RawScheduleStageStringsConfigProperties properties;
+	private AppConfigProperties appConfigProperties;
 	private UserInfoService service;
-	private CommonUtils commonUtils;
+	private LessonCellRenderer lessonCellRenderer;
 	private DefaultKeyboardsComponent defaultKeyboardsComponent;
 
 	@Autowired
 	public RawScheduleStage(MessageOutput messageOutput, MessageRouter messageRouter,
-	                        RtsServerRestComponent restComponent, RawScheduleStageStringsConfigProperties properties,
-	                        UserInfoService service, CommonUtils commonUtils,
-	                        DefaultKeyboardsComponent defaultKeyboardsComponent) {
+	                        BackendComponent restComponent, ScheduleService scheduleService,
+	                        RawScheduleStageStringsConfigProperties properties,
+	                        AppConfigProperties appConfigProperties, UserInfoService service,
+	                        LessonCellRenderer lessonCellRenderer, DefaultKeyboardsComponent defaultKeyboardsComponent) {
 		this.messageOutput = messageOutput;
 		this.messageRouter = messageRouter;
 		this.restComponent = restComponent;
+		this.scheduleService = scheduleService;
 		this.properties = properties;
+		this.appConfigProperties = appConfigProperties;
 		this.service = service;
-		this.commonUtils = commonUtils;
+		this.lessonCellRenderer = lessonCellRenderer;
 		this.defaultKeyboardsComponent = defaultKeyboardsComponent;
 	}
 
@@ -62,7 +70,13 @@ public class RawScheduleStage implements Stage {
 	}
 
 	private void step1(UserInfo userInfo, ExtendedMessage message) {
-		restComponent.getWeekSign(userInfo.getFacultyId())
+		String facultyId;
+		if (userInfo instanceof StudentUser) {
+			facultyId = ((StudentUser) userInfo).getFacultyId();
+		} else {
+			facultyId = appConfigProperties.getPrimaryFaculty();
+		}
+		restComponent.getWeekSign(facultyId)
 				.thenAccept(response -> {
 					if (response.getWeekSign().equals(WeekSign.ANY)) {
 						try {
@@ -98,14 +112,22 @@ public class RawScheduleStage implements Stage {
 	private void step2(UserInfo userInfo, ExtendedMessage message) throws JsonProcessingException {
 		JsonNode jsonNode = new ObjectMapper().readTree(message.getPayload());
 		WeekSign weekSign = WeekSign.valueOf(jsonNode.get("sign").asText());
-		restComponent.getRawSchedule(userInfo.getFacultyId(), userInfo.getGroupId())
+		scheduleService.getRawSchedule(userInfo)
 				.thenAccept(response -> {
-					List<LessonCellMirror> list = response.stream()
-							.filter(cell -> cell.getWeekSign().equals(WeekSign.ANY) ||
-									cell.getWeekSign().equals(weekSign))
-							.filter(cell -> cell.getSubgroup() == 0 ||
-									cell.getSubgroup().equals(userInfo.getSubgroup()))
-							.collect(Collectors.toList());
+					List<LessonCellMirror> list;
+					if (userInfo instanceof StudentUser) {
+						list = response.stream()
+								.filter(cell -> cell.getWeekSign().equals(WeekSign.ANY) ||
+										cell.getWeekSign().equals(weekSign))
+								.filter(cell -> cell.getSubgroup() == 0 ||
+										cell.getSubgroup().equals(((StudentUser) userInfo).getSubgroup()))
+								.collect(Collectors.toList());
+					} else {
+						list = response.stream()
+								.filter(cell -> cell.getWeekSign().equals(WeekSign.ANY) ||
+										cell.getWeekSign().equals(weekSign))
+								.collect(Collectors.toList());
+					}
 					Map<DayOfWeek, List<LessonCellMirror>> sorted = new HashMap<>();
 					Arrays.stream(DayOfWeek.values())
 							.forEach(dayOfWeek -> sorted.put(dayOfWeek, new ArrayList<>()));
@@ -115,7 +137,7 @@ public class RawScheduleStage implements Stage {
 					StringBuilder sb = new StringBuilder();
 					for (int i = 1; i < 7; i++) {
 						DayOfWeek dayOfWeek = DayOfWeek.of(i);
-						sb.append(commonUtils.convertLessonCells(dayOfWeek, weekSign, false,
+						sb.append(lessonCellRenderer.convertLessonCells(dayOfWeek, weekSign, false,
 								sorted.get(dayOfWeek), false));
 					}
 					messageOutput.sendMessage(message.getUserId(), sb.toString(),
@@ -130,7 +152,7 @@ public class RawScheduleStage implements Stage {
 
 	@Override
 	public void accept(ExtendedMessage message) {
-		Optional<UserInfo> optionalUserInfo = service.getById(message.getUserId());
+		Optional<? extends UserInfo> optionalUserInfo = service.getById(message.getUserId());
 		if (optionalUserInfo.isEmpty()) {
 			messageRouter.routeMessageTo(message, WelcomeStage.NAME);
 			return;

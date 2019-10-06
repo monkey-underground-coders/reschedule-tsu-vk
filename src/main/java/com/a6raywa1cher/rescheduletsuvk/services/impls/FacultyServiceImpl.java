@@ -1,6 +1,6 @@
 package com.a6raywa1cher.rescheduletsuvk.services.impls;
 
-import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
+import com.a6raywa1cher.rescheduletsuvk.component.backend.BackendComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetFacultiesResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.FacultyService;
@@ -16,9 +16,9 @@ import java.util.concurrent.CompletionStage;
 @Service
 public class FacultyServiceImpl implements FacultyService {
 	private static final Logger log = LoggerFactory.getLogger(ScheduleServiceImpl.class);
-	private RtsServerRestComponent restComponent;
+	private BackendComponent restComponent;
 
-	public FacultyServiceImpl(RtsServerRestComponent restComponent) {
+	public FacultyServiceImpl(BackendComponent restComponent) {
 		this.restComponent = restComponent;
 	}
 

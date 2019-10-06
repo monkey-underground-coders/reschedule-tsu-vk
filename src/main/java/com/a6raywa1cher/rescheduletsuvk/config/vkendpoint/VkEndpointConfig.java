@@ -2,6 +2,8 @@ package com.a6raywa1cher.rescheduletsuvk.config.vkendpoint;
 
 import com.a6raywa1cher.rescheduletsuvk.component.messageinput.CallbackApiLongPollMessageInput;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.VkMessageOutput;
+import com.a6raywa1cher.rescheduletsuvk.component.peeruserinfo.PeerUserInfoProvider;
+import com.a6raywa1cher.rescheduletsuvk.component.peeruserinfo.VkPeerUserInfoProvider;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
 import com.vk.api.sdk.client.TransportClient;
 import com.vk.api.sdk.client.VkApiClient;
@@ -40,6 +42,11 @@ public class VkEndpointConfig {
 	@Bean
 	public VkMessageOutput vkMessageOutput(VkApiClient vk, GroupActor groupActor) {
 		return new VkMessageOutput(vk, groupActor);
+	}
+
+	@Bean
+	public PeerUserInfoProvider peerUserInfoProvider(VkApiClient vk, GroupActor groupActor) {
+		return new VkPeerUserInfoProvider(vk, groupActor);
 	}
 
 	@Bean

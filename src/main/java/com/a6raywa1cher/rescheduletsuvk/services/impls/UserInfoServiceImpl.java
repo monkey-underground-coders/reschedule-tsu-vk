@@ -1,6 +1,9 @@
 package com.a6raywa1cher.rescheduletsuvk.services.impls;
 
-import com.a6raywa1cher.rescheduletsuvk.dao.UserInfoRepository;
+import com.a6raywa1cher.rescheduletsuvk.dao.StudentUserRepository;
+import com.a6raywa1cher.rescheduletsuvk.dao.TeacherUserRepository;
+import com.a6raywa1cher.rescheduletsuvk.models.StudentUser;
+import com.a6raywa1cher.rescheduletsuvk.models.TeacherUser;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,25 +15,46 @@ import java.util.Optional;
 @Service
 @Transactional
 public class UserInfoServiceImpl implements UserInfoService {
-	private UserInfoRepository repository;
+	private TeacherUserRepository teacherUserRepository;
+	private StudentUserRepository studentUserRepository;
+
 
 	@Autowired
-	public UserInfoServiceImpl(UserInfoRepository repository) {
-		this.repository = repository;
+	public UserInfoServiceImpl(TeacherUserRepository teacherUserRepository, StudentUserRepository studentUserRepository) {
+		this.teacherUserRepository = teacherUserRepository;
+		this.studentUserRepository = studentUserRepository;
 	}
 
 	@Override
-	public Optional<UserInfo> getById(Integer id) {
-		return repository.findById(id);
+	public Optional<? extends UserInfo> getById(Integer id) {
+		Optional<StudentUser> studentUser = studentUserRepository.findById(id);
+		if (studentUser.isPresent()) {
+			return studentUser;
+		}
+		return teacherUserRepository.findById(id);
 	}
 
 	@Override
-	public UserInfo save(UserInfo userInfo) {
-		return repository.save(userInfo);
+	public <T extends UserInfo> T save(T userInfo) {
+		if (userInfo instanceof StudentUser) {
+			return (T) studentUserRepository.save((StudentUser) userInfo);
+		} else if (userInfo instanceof TeacherUser) {
+			return (T) teacherUserRepository.save((TeacherUser) userInfo);
+		} else if (userInfo == null) {
+			return null;
+		} else {
+			throw new IllegalArgumentException("Unknown userInfo impl: " + userInfo.getClass().getName());
+		}
 	}
 
 	@Override
-	public void delete(UserInfo userInfo) {
-		repository.delete(userInfo);
+	public <T extends UserInfo> void delete(T userInfo) {
+		if (userInfo instanceof StudentUser) {
+			studentUserRepository.delete((StudentUser) userInfo);
+		} else if (userInfo instanceof TeacherUser) {
+			teacherUserRepository.delete((TeacherUser) userInfo);
+		} else if (userInfo != null) {
+			throw new IllegalArgumentException("Unknown userInfo impl: " + userInfo.getClass().getName());
+		}
 	}
 }

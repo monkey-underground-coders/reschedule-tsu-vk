@@ -1,4 +1,4 @@
-package com.a6raywa1cher.rescheduletsuvk.component;
+package com.a6raywa1cher.rescheduletsuvk.component.backend;
 
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.*;
 import com.a6raywa1cher.rescheduletsuvk.config.AppConfigProperties;
@@ -23,13 +23,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 
 @Component
-public class RtsServerRestComponent {
-	private static final Logger log = LoggerFactory.getLogger(RtsServerRestComponent.class);
+public class RtsServerRestBackendComponent implements BackendComponent {
+	private static final Logger log = LoggerFactory.getLogger(RtsServerRestBackendComponent.class);
 	private ExecutorService executor;
 	private URI rts;
 
 	@Autowired
-	public RtsServerRestComponent(AppConfigProperties properties) {
+	public RtsServerRestBackendComponent(AppConfigProperties properties) {
 		this.executor = new ForkJoinPool();
 		this.rts = URI.create(properties.getRtsUrl());
 	}
@@ -70,25 +70,30 @@ public class RtsServerRestComponent {
 		}, executor);
 	}
 
+	@Override
 	public CompletionStage<GetFacultiesResponse> getFaculties() {
 		return request("faculties", GetFacultiesResponse.class);
 	}
 
+	@Override
 	public CompletionStage<GetScheduleForWeekResponse> getScheduleForWeek(String facultyId, String groupId) {
 		return request("faculties/" + encodeValue(facultyId) + "/groups/" + encodeValue(groupId) + "/week",
 				GetScheduleForWeekResponse.class);
 	}
 
+	@Override
 	public CompletionStage<GetScheduleForWeekResponse> getScheduleForWeek(String facultyId, String groupId, LocalDate date) {
 		return request("faculties/" + encodeValue(facultyId) + "/groups/" + encodeValue(groupId) + "/week" +
 						"?day=" + date.format(DateTimeFormatter.ISO_DATE),
 				GetScheduleForWeekResponse.class);
 	}
 
+	@Override
 	public CompletionStage<GetGroupsResponse> getGroups(String facultyId) {
 		return request("faculties/" + encodeValue(facultyId) + "/groups", GetGroupsResponse.class);
 	}
 
+	@Override
 	public CompletionStage<List<LessonCellMirror>> getRawSchedule(String facultyId, String groupId) {
 		return request("faculties/" + encodeValue(facultyId) + "/groups/" + encodeValue(groupId),
 				new TypeReference<>() {
@@ -96,20 +101,29 @@ public class RtsServerRestComponent {
 		);
 	}
 
+	@Override
 	public CompletionStage<GetWeekSignResponse> getWeekSign(String facultyId) {
 		return request("faculties/" + encodeValue(facultyId) + "/week_sign", GetWeekSignResponse.class);
 	}
 
+	@Override
 	public CompletionStage<GetWeekSignResponse> getWeekSign(String facultyId, LocalDate localDate) {
 		return request("faculties/" + encodeValue(facultyId) + "/week_sign?day="
 				+ localDate.format(DateTimeFormatter.ISO_DATE), GetWeekSignResponse.class);
 	}
 
+	@Override
 	public CompletionStage<GetTeachersResponse> findTeacher(String teacherName) {
 		return request("teachers/find/" + encodeValue(teacherName), GetTeachersResponse.class);
 	}
 
+	@Override
 	public CompletionStage<GetScheduleOfTeacherForWeekResponse> getTeacherWeekSchedule(String teacherName) {
 		return request("teachers/" + encodeValue(teacherName) + "/week", GetScheduleOfTeacherForWeekResponse.class);
+	}
+
+	@Override
+	public CompletionStage<GetTeacherRawScheduleResponse> getTeacherRawSchedule(String teacherName) {
+		return request("teachers/" + encodeValue(teacherName), GetTeacherRawScheduleResponse.class);
 	}
 }

@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -21,19 +20,17 @@ import java.util.concurrent.ForkJoinPool;
 @Component
 public class DefaultMessageRouter implements MessageRouter {
 	private static final Logger log = LoggerFactory.getLogger(DefaultMessageRouter.class);
-	private final Map<String, ? extends Stage> stageMap;
+	@Autowired
+	private Map<String, ? extends Stage> stageMap;
 	private final Map<Integer, Stage> hardlinkMap;
-	private final List<? extends FilterStage> globalListeners;
-	private final PrimaryStage primaryStage;
+	@Autowired
+	private List<? extends FilterStage> globalListeners;
+	@Autowired
+	private PrimaryStage primaryStage;
 	private final Executor executor;
 
 	@Autowired
-	public DefaultMessageRouter(@Lazy Map<String, ? extends Stage> stageMap,
-	                            @Lazy List<? extends FilterStage> globalListeners,
-	                            @Lazy PrimaryStage primaryStage) {
-		this.stageMap = stageMap;
-		this.globalListeners = globalListeners;
-		this.primaryStage = primaryStage;
+	public DefaultMessageRouter() {
 		this.hardlinkMap = new ConcurrentHashMap<>();
 		executor = new ForkJoinPool();
 	}

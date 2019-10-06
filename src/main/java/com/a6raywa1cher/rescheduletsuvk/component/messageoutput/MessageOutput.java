@@ -7,6 +7,8 @@ public interface MessageOutput {
 
 	String createKeyboard(boolean oneTime, int[] grid, KeyboardButton... buttonsDescriptions);
 
+	String getDefaultPayload();
+
 	<T> void sendMessage(T to, String message);
 
 	<T> void sendMessage(T to, String message, String keyboard);

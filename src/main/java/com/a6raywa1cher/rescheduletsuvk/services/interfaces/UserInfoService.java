@@ -5,9 +5,9 @@ import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import java.util.Optional;
 
 public interface UserInfoService {
-	Optional<UserInfo> getById(Integer id);
+	Optional<? extends UserInfo> getById(Integer id);
 
-	UserInfo save(UserInfo userInfo);
+	<T extends UserInfo> T save(T userInfo);
 
-	void delete(UserInfo userInfo);
+	<T extends UserInfo> void delete(T userInfo);
 }
