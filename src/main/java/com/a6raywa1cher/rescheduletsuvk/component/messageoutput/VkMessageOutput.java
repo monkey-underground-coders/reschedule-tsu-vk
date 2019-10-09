@@ -56,6 +56,13 @@ public class VkMessageOutput implements MessageOutput {
 		return createKeyboard(oneTime, null, buttonsDescriptions);
 	}
 
+	private String truncate(String str) {
+		if (str.length() < 30) {
+			return str;
+		}
+		return str.substring(0, 12) + "..." + str.substring(str.length() - 12);
+	}
+
 	public String createKeyboard(boolean oneTime, int[] grid, KeyboardButton... buttonsDescriptions) {
 		ObjectMapper objectMapper = new ObjectMapper();
 		ArrayNode allButtons = objectMapper.createArrayNode();
@@ -94,7 +101,7 @@ public class VkMessageOutput implements MessageOutput {
 			button.put("color", keyboardButton.getColor().name().toLowerCase());
 			ObjectNode action = objectMapper.createObjectNode()
 					.put("type", "text")
-					.put("label", keyboardButton.getLabel());
+					.put("label", truncate(keyboardButton.getLabel()));
 			if (keyboardButton.getPayload() != null) {
 				action.put("payload", keyboardButton.getPayload());
 			}
