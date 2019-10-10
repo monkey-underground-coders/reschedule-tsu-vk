@@ -1,5 +1,6 @@
 package com.a6raywa1cher.rescheduletsuvk.config.vkendpoint;
 
+import com.a6raywa1cher.rescheduletsuvk.component.VkOnlineStatusComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.messageinput.CallbackApiLongPollMessageInput;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.VkMessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
@@ -37,23 +38,13 @@ public class VkEndpointConfig {
 		return new VkMessageOutput(vk, groupActor);
 	}
 
-	//	@Bean
-//	public CommandLineRunner commandLineRunner(CallbackApiLongPollMessageInput messageInput,
-//	                                           @Value("${app.strings.teacher-name-regexp}") String welcome) {
-//		System.out.println(welcome);
-//		return args -> {
-//			while (true) {
-//				try {
-//					messageInput.run();
-//				} catch (Exception e) {
-//					Sentry.capture(e);
-//					log.error("Listening error", e);
-//				}
-//			}
-//		};
-//	}
 	@Bean
 	public VkEndpointRunner vkEndpointRunner(CallbackApiLongPollMessageInput messageInput) {
 		return new VkEndpointRunner(messageInput);
+	}
+
+	@Bean
+	public VkOnlineStatusComponent onlineStatusComponent(VkApiClient vkApiClient, GroupActor groupActor) {
+		return new VkOnlineStatusComponent(vkApiClient, groupActor);
 	}
 }

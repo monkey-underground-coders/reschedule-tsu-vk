@@ -10,6 +10,7 @@ import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Arrays;
 
@@ -18,6 +19,7 @@ public class VkMessageOutput implements MessageOutput {
 	private VkApiClient vk;
 	private GroupActor group;
 
+	@Autowired
 	public VkMessageOutput(VkApiClient vk, GroupActor group) {
 		this.vk = vk;
 		this.group = group;
@@ -48,7 +50,7 @@ public class VkMessageOutput implements MessageOutput {
 						.execute();
 			}
 		} catch (ApiException | ClientException e) {
-			log.error("Message not sent", e);
+			throw new RuntimeException("Message execution failed", e);
 		}
 	}
 
@@ -72,7 +74,8 @@ public class VkMessageOutput implements MessageOutput {
 			int maxWidth, maxHeight;
 			if (16 < size) {
 				maxWidth = 4;
-				maxHeight = 17;
+				maxHeight = 10;
+//				maxHeight = 17;
 			} else if (9 < size) {
 				maxWidth = 4;
 				maxHeight = 4;

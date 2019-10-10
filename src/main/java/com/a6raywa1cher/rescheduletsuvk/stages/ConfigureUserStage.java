@@ -100,7 +100,7 @@ public class ConfigureUserStage implements Stage {
 										red ? KeyboardButton.Color.NEGATIVE : KeyboardButton.Color.SECONDARY,
 										facultyId,
 										objectMapper.createObjectNode()
-												.put("button", "1")
+												.put("facultyId", facultyId)
 												.put(ROUTE, NAME)
 												.toString()));
 							});
@@ -116,10 +116,16 @@ public class ConfigureUserStage implements Stage {
 				});
 	}
 
-	private void step2(ExtendedMessage message, UserInfo userInfo) {
+	private void step2(ExtendedMessage message, UserInfo userInfo) throws JsonProcessingException {
 		Integer peerId = message.getUserId();
-		String facultyId = message.getBody();
-		if (facultyId == null || !facultyId.matches(facultyRegex)) {
+		ObjectMapper objectMapper = new ObjectMapper();
+		JsonNode jsonNode = objectMapper.readTree(message.getPayload());
+		String facultyId;
+		if (!jsonNode.has("facultyId")) {
+			returnToFirstStep(message);
+			return;
+		} else if (!(facultyId = jsonNode.get("facultyId").asText()).matches(facultyRegex)) {
+			Sentry.capture("Invalid facultyId: " + facultyId);
 			returnToFirstStep(message);
 			return;
 		}
@@ -129,7 +135,6 @@ public class ConfigureUserStage implements Stage {
 						returnToFirstStep(message);
 						return;
 					}
-					ObjectMapper objectMapper = new ObjectMapper();
 					userInfo.setFacultyId(facultyId);
 					List<KeyboardButton> buttons = response.stream()
 							.map(GetGroupsResponse.GroupInfo::getLevel)

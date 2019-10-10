@@ -6,6 +6,7 @@ import com.a6raywa1cher.rescheduletsuvk.stages.PrimaryStage;
 import com.a6raywa1cher.rescheduletsuvk.stages.Stage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,29 +78,34 @@ public class DefaultMessageRouter implements MessageRouter {
 	}
 
 	private void $routeMessage(ExtendedMessage message) {
-		int userId = message.getUserId();
-		for (FilterStage filterStage : filterStages) {
-			message = filterStage.process(message);
-			if (message == null) {
-				log.info("Global listener {} stopped processing of {}'s message",
-						filterStage.getClass().toString(), userId);
-				return;
+		try {
+			int userId = message.getUserId();
+			for (FilterStage filterStage : filterStages) {
+				message = filterStage.process(message);
+				if (message == null) {
+					log.info("Global listener {} stopped processing of {}'s message",
+							filterStage.getClass().toString(), userId);
+					return;
+				}
 			}
-		}
-		if (message.getPayload() != null) {
-			ObjectMapper objectMapper = new ObjectMapper();
-			try {
-				JsonNode jsonNode = objectMapper.readTree(message.getPayload());
-				log.debug("Routing user {} message with payload to " + jsonNode.get(ROUTE).asText(), userId);
-				stageMap.get(jsonNode.get(ROUTE).asText()).accept(message);
-			} catch (Exception e) {
-				log.debug("Failover routing user {} to primaryStage", userId);
-				primaryStage.accept(message);
+			if (message.getPayload() != null) {
+				ObjectMapper objectMapper = new ObjectMapper();
+				try {
+					JsonNode jsonNode = objectMapper.readTree(message.getPayload());
+					log.debug("Routing user {} message with payload to " + jsonNode.get(ROUTE).asText(), userId);
+					stageMap.get(jsonNode.get(ROUTE).asText()).accept(message);
+				} catch (Exception e) {
+					log.debug("Failover routing user {} to primaryStage", userId);
+					primaryStage.accept(message);
+				}
+			} else {
+				log.debug("Routing payload-blank message from {} to {}", userId,
+						hardlinkMap.getOrDefault(userId, primaryStage).getClass().getName());
+				hardlinkMap.getOrDefault(userId, primaryStage).accept(message);
 			}
-		} else {
-			log.debug("Routing payload-blank message from {} to {}", userId,
-					hardlinkMap.getOrDefault(userId, primaryStage).getClass().getName());
-			hardlinkMap.getOrDefault(userId, primaryStage).accept(message);
+		} catch (Exception e) {
+			log.error("Catched exception", e);
+			Sentry.capture(e);
 		}
 	}
 }

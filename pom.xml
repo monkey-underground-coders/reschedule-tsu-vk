@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.a6raywa1cher</groupId>
     <artifactId>reschedule-tsu-vk</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
     <name>reschedule-tsu-vk</name>
     <description>Vk.com bot for TvSU</description>
