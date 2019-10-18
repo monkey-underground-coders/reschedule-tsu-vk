@@ -10,6 +10,7 @@ import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.FindTeacherStageStringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
 import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentry.Sentry;
 import org.apache.commons.lang3.StringUtils;
@@ -67,18 +68,29 @@ public class FindTeacherStage implements Stage {
 				getKeyboard());
 	}
 
-	private void step2(ExtendedMessage message) {
-		if (!message.getBody().matches(teacherNameRegex)) {
+	private String getTeacherName(ExtendedMessage message) throws JsonProcessingException {
+		return message.getPayload() != null ? Optional.ofNullable(new ObjectMapper().readTree(message.getPayload())
+				.get("teacherName").asText(null)).orElse(message.getBody()) : message.getBody();
+	}
+
+	private void step2(ExtendedMessage message) throws JsonProcessingException {
+		ObjectMapper objectMapper = new ObjectMapper();
+		String teacherName = getTeacherName(message);
+		if (!teacherName.matches(teacherNameRegex)) {
 			messageOutput.sendMessage(message.getUserId(), properties.getInvalidName(), getKeyboard());
 			return;
 		}
-		restComponent.findTeacher(message.getBody())
+		restComponent.findTeacher(teacherName)
 				.thenAccept(response -> {
 					if (response.getTeachers() == null || response.getTeachers().isEmpty()) {
 						messageOutput.sendMessage(message.getUserId(), properties.getInvalidName(), getKeyboard());
 //						returnToMainMenu(message, false);
 					} else if (response.getTeachers().size() == 1) {
-						step3(message, response.getTeachers().get(0));
+						try {
+							step3(message, response.getTeachers().get(0));
+						} catch (JsonProcessingException ignored) {
+							// impossible condition
+						}
 					} else if (response.getTeachers().size() > 16) {
 						messageOutput.sendMessage(message.getUserId(),
 								properties.getTooManyTeachersInResult(), getKeyboard());
@@ -87,7 +99,12 @@ public class FindTeacherStage implements Stage {
 								messageOutput.createKeyboard(true,
 										response.getTeachers().stream()
 												.sorted()
-												.map(name -> new KeyboardButton(KeyboardButton.Color.SECONDARY, name))
+												.map(name ->
+														new KeyboardButton(KeyboardButton.Color.SECONDARY, name,
+																objectMapper.createObjectNode()
+																		.put("teacherName", name)
+																		.toString()
+														))
 												.collect(Collectors.toList()).toArray(new KeyboardButton[]{})));
 					}
 				})
@@ -98,8 +115,8 @@ public class FindTeacherStage implements Stage {
 				});
 	}
 
-	private void step3(ExtendedMessage message, String teacherName) {
-		if (!message.getBody().matches(teacherNameRegex)) {
+	private void step3(ExtendedMessage message, String teacherName) throws JsonProcessingException {
+		if (!teacherName.matches(teacherNameRegex)) {
 			messageOutput.sendMessage(message.getUserId(), properties.getInvalidName(), getKeyboard());
 			return;
 		}
@@ -143,14 +160,18 @@ public class FindTeacherStage implements Stage {
 
 	@Override
 	public void accept(ExtendedMessage message) {
-		if (message.getBody().equals(properties.getExit())) {
+		try {
+			if (message.getBody().equals(properties.getExit())) {
+				returnToMainMenu(message, false);
+			} else if (messageRouter.link(message.getUserId(), this)) {
+				step1(message);
+			} else if (message.getPayload() == null) {
+				step2(message);
+			} else {
+				step3(message, getTeacherName(message));
+			}
+		} catch (JsonProcessingException e) {
 			returnToMainMenu(message, false);
-		} else if (messageRouter.link(message.getUserId(), this)) {
-			step1(message);
-		} else if (message.getPayload() == null) {
-			step2(message);
-		} else {
-			step3(message, message.getBody());
 		}
 	}
 }

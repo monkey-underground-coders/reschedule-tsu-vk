@@ -88,7 +88,11 @@ public class DefaultMessageRouter implements MessageRouter {
 					return;
 				}
 			}
-			if (message.getPayload() != null) {
+			if (hardlinkMap.containsKey(userId)) {
+				Stage stage = hardlinkMap.get(userId);
+				log.debug("Routing hard-linked user {} to {}", userId, stage.getClass().getName());
+				stage.accept(message);
+			} else if (message.getPayload() != null) {
 				ObjectMapper objectMapper = new ObjectMapper();
 				try {
 					JsonNode jsonNode = objectMapper.readTree(message.getPayload());
