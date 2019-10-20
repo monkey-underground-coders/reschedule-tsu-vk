@@ -15,4 +15,10 @@ public class VkConfigProperties {
 	private Integer groupId;
 
 	private String token;
+
+	private boolean useCallbackApi = false;
+
+	private String secretConfirm;
+
+	private String secretKey;
 }

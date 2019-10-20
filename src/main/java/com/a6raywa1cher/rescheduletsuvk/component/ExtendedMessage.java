@@ -1,14 +1,17 @@
 package com.a6raywa1cher.rescheduletsuvk.component;
 
-import com.google.gson.annotations.SerializedName;
-import com.vk.api.sdk.objects.messages.Message;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
 
-public class ExtendedMessage extends Message {
-	@SerializedName("payload")
+@Data
+public class ExtendedMessage {
 	private String payload;
 
-	public String getPayload() {
-		return payload;
-	}
+	@JsonAlias({"text"})
+	private String body;
 
+	@JsonProperty("user_id")
+	@JsonAlias({"peer_id"})
+	private Integer userId;
 }

@@ -10,6 +10,7 @@ import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Arrays;
 
@@ -18,6 +19,7 @@ public class VkMessageOutput implements MessageOutput {
 	private VkApiClient vk;
 	private GroupActor group;
 
+	@Autowired
 	public VkMessageOutput(VkApiClient vk, GroupActor group) {
 		this.vk = vk;
 		this.group = group;
@@ -48,12 +50,19 @@ public class VkMessageOutput implements MessageOutput {
 						.execute();
 			}
 		} catch (ApiException | ClientException e) {
-			log.error("Message not sent", e);
+			throw new RuntimeException("Message execution failed", e);
 		}
 	}
 
 	public String createKeyboard(boolean oneTime, KeyboardButton... buttonsDescriptions) {
 		return createKeyboard(oneTime, null, buttonsDescriptions);
+	}
+
+	private String truncate(String str) {
+		if (str.length() < 30) {
+			return str;
+		}
+		return str.substring(0, 12) + "..." + str.substring(str.length() - 12);
 	}
 
 	public String createKeyboard(boolean oneTime, int[] grid, KeyboardButton... buttonsDescriptions) {
@@ -65,7 +74,8 @@ public class VkMessageOutput implements MessageOutput {
 			int maxWidth, maxHeight;
 			if (16 < size) {
 				maxWidth = 4;
-				maxHeight = 17;
+				maxHeight = 10;
+//				maxHeight = 17;
 			} else if (9 < size) {
 				maxWidth = 4;
 				maxHeight = 4;
@@ -100,7 +110,7 @@ public class VkMessageOutput implements MessageOutput {
 			}
 			ObjectNode action = objectMapper.createObjectNode()
 					.put("type", "text")
-					.put("label", label);
+					.put("label", truncate(keyboardButton.getLabel()));
 			if (keyboardButton.getPayload() != null) {
 				action.put("payload", keyboardButton.getPayload());
 			}

@@ -2,6 +2,9 @@ app:
   vk:
     group-id: 0
     token: ---
+    use-callback-api: true
+    secret-confirm: ---
+    secret-key: ---
   rts-url: ---
   primary-faculty: ---
   activate-dialogflow: false
