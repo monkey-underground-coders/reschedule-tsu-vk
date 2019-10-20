@@ -6,10 +6,12 @@ import com.a6raywa1cher.rescheduletsuvk.component.messageinput.MessageInput;
 import com.a6raywa1cher.rescheduletsuvk.component.messageinput.callbackapi.CallbackApiMessageInput;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.VkMessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
+import com.vk.api.sdk.actions.Groups;
 import com.vk.api.sdk.client.TransportClient;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
 import com.vk.api.sdk.httpclient.HttpTransportClient;
+import com.vk.api.sdk.queries.groups.GroupsSetLongPollSettingsQuery;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +30,28 @@ public class VkEndpointConfig {
 	@Bean
 	public VkApiClient vkApiClient() {
 		TransportClient transportClient = HttpTransportClient.getInstance();
-		return new VkApiClient(transportClient);
+		return new VkApiClient(transportClient) {
+			@Override
+			public String getVersion() {
+				return "5.102";
+			}
+
+			@Override
+			public Groups groups() {
+				return new Groups(this) {
+					@Override
+					public GroupsSetLongPollSettingsQuery setLongPollSettings(GroupActor actor) {
+						return new GroupsSetLongPollSettingsQuery(this.getClient(), actor) {
+							@Override
+							public GroupsSetLongPollSettingsQuery groupId(int groupId) {
+								GroupsSetLongPollSettingsQuery groupsSetLongPollSettingsQuery = super.groupId(groupId);
+								return groupsSetLongPollSettingsQuery.unsafeParam("api_version", "5.102");
+							}
+						};
+					}
+				};
+			}
+		};
 	}
 
 	@Bean

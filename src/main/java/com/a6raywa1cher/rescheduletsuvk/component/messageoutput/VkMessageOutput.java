@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Arrays;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class VkMessageOutput implements MessageOutput {
 	private static final Logger log = LoggerFactory.getLogger(VkMessageOutput.class);
@@ -41,12 +42,14 @@ public class VkMessageOutput implements MessageOutput {
 						.peerId((Integer) peerId)
 						.unsafeParam("dont_parse_links", 1)
 						.unsafeParam("keyboard", keyboard)
+						.randomId(ThreadLocalRandom.current().nextInt())
 						.execute();
 			} else {
 				vk.messages().send(group)
 						.message(message)
 						.peerId((Integer) peerId)
 						.unsafeParam("dont_parse_links", 1)
+						.randomId(ThreadLocalRandom.current().nextInt())
 						.execute();
 			}
 		} catch (ApiException | ClientException e) {
