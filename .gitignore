@@ -30,6 +30,7 @@ build/
 ### VS Code ###
 .vscode/
 
+### Project ignorings ###
 /src/main/resources/application-dev.yml
 /src/main/resources/application-staging.yml
 /src/main/resources/application-prod.yml
@@ -38,3 +39,33 @@ deploy-staging.sh
 deploy-prod.sh
 /src/main/resources/sentry.properties
 /src/main/resources/googlecredentials.json
+
+
+### macOS template
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
