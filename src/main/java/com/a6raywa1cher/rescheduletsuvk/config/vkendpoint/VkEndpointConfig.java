@@ -32,20 +32,14 @@ public class VkEndpointConfig {
 		TransportClient transportClient = HttpTransportClient.getInstance();
 		return new VkApiClient(transportClient) {
 			@Override
-			public String getVersion() {
-				return "5.102";
-			}
-
-			@Override
 			public Groups groups() {
 				return new Groups(this) {
 					@Override
-					public GroupsSetLongPollSettingsQuery setLongPollSettings(GroupActor actor) {
-						return new GroupsSetLongPollSettingsQuery(this.getClient(), actor) {
+					public GroupsSetLongPollSettingsQuery setLongPollSettings(GroupActor actor, int groupId) {
+						return new GroupsSetLongPollSettingsQuery(this.getClient(), actor, groupId) {
 							@Override
-							public GroupsSetLongPollSettingsQuery groupId(int groupId) {
-								GroupsSetLongPollSettingsQuery groupsSetLongPollSettingsQuery = super.groupId(groupId);
-								return groupsSetLongPollSettingsQuery.unsafeParam("api_version", "5.102");
+							protected GroupsSetLongPollSettingsQuery groupId(int value) {
+								return super.groupId(value).apiVersion("5.101");
 							}
 						};
 					}
@@ -64,7 +58,7 @@ public class VkEndpointConfig {
 		if (properties.isUseCallbackApi()) {
 			return new CallbackApiMessageInput(messageRouter, properties);
 		} else {
-			return new CallbackApiLongPollMessageInput(vk, groupActor, messageRouter, vk, groupActor);
+			return new CallbackApiLongPollMessageInput(vk, groupActor, messageRouter, properties);
 		}
 	}
 

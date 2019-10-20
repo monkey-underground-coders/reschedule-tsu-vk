@@ -2,6 +2,7 @@ package com.a6raywa1cher.rescheduletsuvk.component.messageinput;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
+import com.a6raywa1cher.rescheduletsuvk.config.vkendpoint.VkConfigProperties;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
@@ -23,21 +24,22 @@ public class CallbackApiLongPollMessageInput extends CallbackApiLongPoll impleme
 	private VkApiClient vk;
 	private GroupActor group;
 	private ObjectMapper objectMapper;
+	private VkConfigProperties properties;
 
 	@Autowired
-	public CallbackApiLongPollMessageInput(VkApiClient client, GroupActor actor, MessageRouter component,
-	                                       VkApiClient vk, GroupActor group) {
+	public CallbackApiLongPollMessageInput(VkApiClient client, GroupActor actor, MessageRouter component, VkConfigProperties properties) {
 		super(client, actor);
 		this.component = component;
-		this.vk = vk;
-		this.group = group;
+		this.vk = client;
+		this.group = actor;
+		this.properties = properties;
 		this.objectMapper = new ObjectMapper()
 				.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 	}
 
 	@PostConstruct
 	public void onStart() throws ClientException, ApiException {
-		vk.groups().setLongPollSettings(group).enabled(true)
+		vk.groups().setLongPollSettings(group, properties.getGroupId()).enabled(true)
 				.messageNew(true)
 				.execute();
 	}
