@@ -85,6 +85,7 @@ public class CommonUtils {
 		LocalTime end = null;
 		Integer columnPosition = null;
 		boolean crossPair = false;
+		boolean userMade = false;
 		for (LessonCellMirror mirror : mirrors) {
 			subjectNames.add(mirror.getFullSubjectName());
 			if (mirror.getAuditoryAddress() != null) auditories.add(mirror.getAuditoryAddress());
@@ -108,10 +109,11 @@ public class CommonUtils {
 						+ columnPosition + " and " + mirror.getColumnPosition());
 			}
 			crossPair = crossPair | mirror.getCrossPair();
+			userMade |= mirror.getUserMade() != null && mirror.getUserMade();
 		}
 		LessonCellView lessonCellView = new LessonCellView(new ArrayList<>(subjectNames), new ArrayList<>(teachers),
 				new ArrayList<>(groupsAndSubgroups), new ArrayList<>(auditories), columnPosition,
-				crossPair, start, end);
+				crossPair, start, end, userMade);
 		return convertLessonView(lessonCellView, today, detailed, showTeachers, showGroups, showEmoji);
 	}
 
@@ -130,7 +132,8 @@ public class CommonUtils {
 				(mirror.getAuditoryAddress() == null) ? Collections.emptyList() :
 						Collections.singletonList(mirror.getAuditoryAddress()),
 				mirror.getColumnPosition(), mirror.getCrossPair(), mirror.getStart(),
-				mirror.getEnd()
+				mirror.getEnd(),
+				mirror.getUserMade() != null && mirror.getUserMade()
 		);
 		return convertLessonView(lessonCellView, today, detailed, showTeachers, showGroups, showEmoji);
 	}
@@ -189,7 +192,8 @@ public class CommonUtils {
 		}
 		if (showEmoji) {
 			out.append(subgroup ? " " + properties.getSingleSubgroupEmoji() : "") // is subgroup separated from another
-					.append(view.isCrossPair() ? " " + properties.getCrossPairEmoji() : ""); // is cross-pair
+					.append(view.isCrossPair() ? " " + properties.getCrossPairEmoji() : "") // is cross-pair
+					.append(view.isUserMade() ? " " + properties.getUserMadeEmoji() : "");
 		}
 		if (detailed && showTeachers && view.getTeachersNames().size() != 0) {
 			out.append('\n').append(properties.getTeacherEmoji()).append(' ');
@@ -240,5 +244,7 @@ public class CommonUtils {
 		private LocalTime start;
 
 		private LocalTime end;
+
+		private boolean userMade;
 	}
 }

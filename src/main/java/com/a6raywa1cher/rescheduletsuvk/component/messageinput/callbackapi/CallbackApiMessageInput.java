@@ -36,6 +36,7 @@ public class CallbackApiMessageInput implements MessageInput {
 
 	@PostMapping("/callback")
 	public ResponseEntity<?> callbackRequest(@RequestBody @Valid CallbackApiInput json) throws JsonProcessingException {
+		log.info("Got callback req");
 		if (!json.getSecret().equals(properties.getSecretKey()) || !json.getGroupId().equals(properties.getGroupId())) {
 			log.error("Invalid secret!");
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -52,6 +53,7 @@ public class CallbackApiMessageInput implements MessageInput {
 			component.routeMessage(objectMapper.treeToValue(json.getObject(), ExtendedMessage.class));
 		} catch (Exception e) {
 			Sentry.capture(e);
+			log.error("Exception during routing", e);
 			throw e;
 		}
 		return ResponseEntity.ok().body("ok");

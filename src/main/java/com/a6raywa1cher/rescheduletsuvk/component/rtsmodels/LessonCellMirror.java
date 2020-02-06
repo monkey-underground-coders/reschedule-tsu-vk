@@ -8,8 +8,6 @@ import java.time.LocalTime;
 
 @Data
 public class LessonCellMirror {
-//	private String externalId;
-
 	private WeekSign weekSign;
 
 	private String fullSubjectName;
@@ -41,4 +39,6 @@ public class LessonCellMirror {
 	private Boolean crossPair;
 
 	private String faculty;
+
+	private Boolean userMade;
 }

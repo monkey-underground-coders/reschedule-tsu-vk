@@ -19,6 +19,8 @@ public class StringsConfigProperties {
 	@NotBlank
 	private String crossPairEmoji;
 	@NotBlank
+	private String userMadeEmoji;
+	@NotBlank
 	private String singleSubgroupEmoji;
 	@NotBlank
 	private String teacherEmoji;
