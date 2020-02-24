@@ -1,6 +1,7 @@
 package com.a6raywa1cher.rescheduletsuvk.component.textquery;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
+import com.a6raywa1cher.rescheduletsuvk.component.router.MessageResponse;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.google.cloud.dialogflow.v2.*;
 import com.google.protobuf.Value;
@@ -11,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 public class DialogFlowTextQueryProcessor implements TextQueryProcessor {
 	private static final Logger log = LoggerFactory.getLogger(DialogFlowTextQueryProcessor.class);
@@ -56,34 +59,33 @@ public class DialogFlowTextQueryProcessor implements TextQueryProcessor {
 		}
 	}
 
-	private void getPairs(UserInfo userInfo, ExtendedMessage extendedMessage, QueryResult queryResult) {
+	private CompletionStage<MessageResponse> getPairs(UserInfo userInfo, ExtendedMessage extendedMessage, QueryResult queryResult) {
 		Map<String, Value> map = queryResult.getParameters().getFieldsMap();
 		String group = map.containsKey("group_name") && map.get("group_name").getNumberValue() != 0d ? Integer.toString((int) map.get("group_name").getNumberValue())
 				: userInfo.getGroupId();
 		LocalDateTime localDateTime = map.containsKey("date") ? LocalDateTime.from(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(
 				map.get("date").getStringValue())) : LocalDateTime.now();
 		log.debug("group: {}, ldt:{}", group, localDateTime.toString());
-		textQueryExecutor.getPair(userInfo, extendedMessage, group, localDateTime.toLocalDate());
+		return textQueryExecutor.getPair(userInfo, extendedMessage, group, localDateTime.toLocalDate());
 	}
 
 	@Override
-	public boolean process(UserInfo userInfo, ExtendedMessage extendedMessage) {
+	public CompletionStage<MessageResponse> process(UserInfo userInfo, ExtendedMessage extendedMessage) {
 		try {
 			if (extendedMessage.getBody() == null || extendedMessage.getBody().isBlank() ||
-					extendedMessage.getBody().length() > 250) return false;
+					extendedMessage.getBody().length() > 250) return CompletableFuture.completedFuture(null);
 			QueryResult queryResult = detectIntentTexts(extendedMessage.getBody(),
 					Integer.toString(extendedMessage.getUserId()), "ru-RU");
 			switch (queryResult.getIntent().getDisplayName()) {
 				case GET_PAIRS:
-					getPairs(userInfo, extendedMessage, queryResult);
-					return true;
+					return getPairs(userInfo, extendedMessage, queryResult);
 				default:
-					return false;
+					return CompletableFuture.completedFuture(null);
 			}
 		} catch (Exception e) {
 			log.error("DialogFlow error", e);
 			Sentry.capture(e);
-			return false;
+			return CompletableFuture.completedFuture(null);
 		}
 	}
 }

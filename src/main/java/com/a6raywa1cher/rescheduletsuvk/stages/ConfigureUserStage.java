@@ -2,7 +2,7 @@ package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
-import com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter;
+import com.a6raywa1cher.rescheduletsuvk.component.router.*;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
@@ -17,15 +17,11 @@ import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import java.time.format.TextStyle;
@@ -34,16 +30,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
-import static com.a6raywa1cher.rescheduletsuvk.stages.ConfigureUserStage.NAME;
 
-@Component(NAME)
-public class ConfigureUserStage implements Stage {
-	public static final String NAME = "configureUserStage";
+@Component
+@RTStage
+@RTMessageMapping("/configure")
+public class ConfigureUserStage {
 	private static final Logger log = LoggerFactory.getLogger(ConfigureUserStage.class);
 	@Value("${app.strings.faculty-regexp}")
 	public String facultyRegex;
@@ -52,7 +47,6 @@ public class ConfigureUserStage implements Stage {
 	@Value("${app.strings.course-regexp}")
 	public String courseRegex;
 	private MessageOutput messageOutput;
-	private LoadingCache<Integer, Pair<UserInfo, Integer>> userInfoLoadingCache;
 	private UserInfoService service;
 	private MessageRouter messageRouter;
 	private AppConfigProperties properties;
@@ -74,22 +68,14 @@ public class ConfigureUserStage implements Stage {
 		this.scheduleService = scheduleService;
 		this.facultyService = facultyService;
 		this.commonUtils = commonUtils;
-		this.userInfoLoadingCache = CacheBuilder.newBuilder()
-				.expireAfterAccess(1, TimeUnit.HOURS)
-				.build(new CacheLoader<>() {
-					@Override
-					public Pair<UserInfo, Integer> load(Integer integer) throws Exception {
-						UserInfo userInfo = new UserInfo();
-						userInfo.setPeerId(integer);
-						return Pair.of(userInfo, 1);
-					}
-				});
 	}
 
-	private void step1(ExtendedMessage message, UserInfo userInfo) {
-		Integer peerId = message.getUserId();
-		facultyService.getFacultiesList()
-				.thenAccept(response -> {
+	@RTMessageMapping("/step1")
+	public CompletionStage<MessageResponse> step1(ExtendedMessage message) {
+		UserInfo userInfo = new UserInfo();
+		userInfo.setPeerId(message.getUserId());
+		return facultyService.getFacultiesList()
+				.thenApply(response -> {
 					List<KeyboardButton> buttons = new ArrayList<>();
 					ObjectMapper objectMapper = new ObjectMapper();
 					response.stream()
@@ -101,39 +87,41 @@ public class ConfigureUserStage implements Stage {
 										facultyId,
 										objectMapper.createObjectNode()
 												.put("facultyId", facultyId)
-												.put(ROUTE, NAME)
+												.put(ROUTE, "/configure/step2")
 												.toString()));
 							});
-					messageOutput.sendMessage(message.getUserId(),
-							stringProperties.getChooseFaculty(),
-							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
-					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 2));
+					return MessageResponse.builder()
+							.message(stringProperties.getChooseFaculty())
+							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
+							.set("userInfo", userInfo)
+							.build();
 				})
 				.exceptionally(e -> {
 					log.error("step 1 error", e);
 					Sentry.capture(e);
-					return null;
+					return MessageResponse.builder()
+							.redirectTo("/")
+							.build();
 				});
 	}
 
-	private void step2(ExtendedMessage message, UserInfo userInfo) throws JsonProcessingException {
+	@RTMessageMapping("/step2")
+	public CompletionStage<MessageResponse> step2(ExtendedMessage message, @RTContainerEntity UserInfo userInfo)
+			throws JsonProcessingException {
 		Integer peerId = message.getUserId();
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode jsonNode = objectMapper.readTree(message.getPayload());
 		String facultyId;
 		if (!jsonNode.has("facultyId")) {
-			returnToFirstStep(message);
-			return;
+			return returnToFirstStepCF();
 		} else if (!(facultyId = jsonNode.get("facultyId").asText()).matches(facultyRegex)) {
 			Sentry.capture("Invalid facultyId: " + facultyId);
-			returnToFirstStep(message);
-			return;
+			return returnToFirstStepCF();
 		}
-		facultyService.getGroupsList(facultyId)
-				.thenAccept(response -> {
+		return facultyService.getGroupsList(facultyId)
+				.thenApply(response -> {
 					if (response.isEmpty()) {
-						returnToFirstStep(message);
-						return;
+						return returnToFirstStep();
 					}
 					userInfo.setFacultyId(facultyId);
 					List<KeyboardButton> buttons = response.stream()
@@ -141,31 +129,45 @@ public class ConfigureUserStage implements Stage {
 							.distinct()
 							.sorted()
 							.map(level -> new KeyboardButton(KeyboardButton.Color.SECONDARY, level, objectMapper.createObjectNode()
-									.put(ROUTE, NAME)
+									.put(ROUTE, "/configure/step3")
 									.toString()))
 							.collect(Collectors.toList());
-					messageOutput.sendMessage(message.getUserId(),
-							stringProperties.getChooseLevel(),
-							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
-					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 3));
+//					messageOutput.sendMessage(message.getUserId(),
+//							stringProperties.getChooseLevel(),
+//							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
+//					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 3));
+					return MessageResponse.builder()
+							.message(stringProperties.getChooseLevel())
+							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
+							.build();
 				})
 				.exceptionally(e -> {
 					log.error("step 2 error", e);
 					Sentry.capture(e);
-					return null;
+					return MessageResponse.builder()
+							.redirectTo("/")
+							.build();
 				});
 	}
 
-	private void step3(ExtendedMessage message, UserInfo userInfo) {
+	private MessageResponse returnToFirstStep() {
+		return MessageResponse.builder().redirectTo("/configure/step1").build();
+	}
+
+	private CompletableFuture<MessageResponse> returnToFirstStepCF() {
+		return CompletableFuture.completedFuture(returnToFirstStep());
+	}
+
+	@RTMessageMapping("/step3")
+	public CompletionStage<MessageResponse> step3(ExtendedMessage message, @RTContainerEntity UserInfo userInfo) {
 		Integer peerId = message.getUserId();
 		ObjectMapper objectMapper = new ObjectMapper();
 		String level = message.getBody();
 		if (level == null || (!level.equals("Бакалавриат | Специалитет") && !level.equals("Магистратура"))) {
-			returnToFirstStep(message);
-			return;
+			return returnToFirstStepCF();
 		}
-		facultyService.getGroupsList(userInfo.getFacultyId())
-				.thenAccept(response -> {
+		return facultyService.getGroupsList(userInfo.getFacultyId())
+				.thenApply(response -> {
 					List<KeyboardButton> buttons = response.stream()
 							.filter(gi -> gi.getLevel().equals(level))
 							.map(GetGroupsResponse.GroupInfo::getCourse)
@@ -173,23 +175,27 @@ public class ConfigureUserStage implements Stage {
 							.sorted()
 							.map(course -> new KeyboardButton(KeyboardButton.Color.SECONDARY,
 									Integer.toString(course), objectMapper.createObjectNode()
-									.put(ROUTE, NAME)
+									.put(ROUTE, "/configure/step4")
 									.put("level", level)
 									.toString()))
 							.collect(Collectors.toList());
-					messageOutput.sendMessage(message.getUserId(),
-							stringProperties.getChooseCourse(),
-							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
-					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 4));
+					return MessageResponse.builder()
+							.message(stringProperties.getChooseCourse())
+							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
+							.build();
 				})
 				.exceptionally(e -> {
 					log.error("step 3 error", e);
 					Sentry.capture(e);
-					return null;
+					return MessageResponse.builder()
+							.redirectTo("/")
+							.build();
 				});
 	}
 
-	private void step4(ExtendedMessage message, UserInfo userInfo) throws JsonProcessingException {
+	@RTMessageMapping("/step4")
+	public CompletionStage<MessageResponse> step4(ExtendedMessage message, @RTContainerEntity UserInfo userInfo)
+			throws JsonProcessingException {
 		Integer peerId = message.getUserId();
 		ObjectMapper objectMapper = new ObjectMapper();
 		String course = message.getBody();
@@ -197,11 +203,10 @@ public class ConfigureUserStage implements Stage {
 		String level = payload.get("level").asText();
 		if (course == null || !course.matches(courseRegex) || level == null ||
 				(!level.equals("Бакалавриат | Специалитет") && !level.equals("Магистратура"))) {
-			returnToFirstStep(message);
-			return;
+			return returnToFirstStepCF();
 		}
-		facultyService.getGroupsList(userInfo.getFacultyId())
-				.thenAccept(response -> {
+		return facultyService.getGroupsList(userInfo.getFacultyId())
+				.thenApply(response -> {
 					List<KeyboardButton> buttons = response.stream()
 							.filter(gi -> gi.getLevel().equals(level))
 							.filter(gi -> gi.getCourse().equals(Integer.parseInt(course)))
@@ -212,140 +217,108 @@ public class ConfigureUserStage implements Stage {
 									groupName.length() >= 40 ? groupName.substring(0, 20) + "..." +
 											groupName.substring(groupName.length() - 15) : groupName,
 									objectMapper.createObjectNode()
-											.put(ROUTE, NAME)
+											.put(ROUTE, "/configure/step5")
 											.put("groupName", groupName)
 											.toString()))
 							.collect(Collectors.toList());
-					messageOutput.sendMessage(message.getUserId(),
-							stringProperties.getChooseGroup(),
-							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
-					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 5));
+					return MessageResponse.builder()
+							.message(stringProperties.getChooseGroup())
+							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
+							.build();
 				})
 				.exceptionally(e -> {
 					log.error("step 4 error", e);
 					Sentry.capture(e);
-					return null;
+					return MessageResponse.builder()
+							.redirectTo("/")
+							.build();
 				});
 	}
 
-	private void step5(ExtendedMessage message, UserInfo userInfo) throws JsonProcessingException {
+	@RTMessageMapping("/step5")
+	public CompletionStage<MessageResponse> step5(ExtendedMessage message, @RTContainerEntity UserInfo userInfo)
+			throws JsonProcessingException {
 		Integer peerId = message.getUserId();
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode payload = objectMapper.readTree(message.getPayload());
 		String groupId = payload.get("groupName").asText();
 		String facultyId = userInfo.getFacultyId();
 		if (groupId == null || !groupId.matches(groupRegex)) {
-			returnToFirstStep(message);
-			return;
+			return returnToFirstStepCF();
 		}
-		facultyService.getGroupsList(facultyId)
+		return facultyService.getGroupsList(facultyId)
 				.thenCompose(response -> {
 					Optional<GetGroupsResponse.GroupInfo> optionalGroupInfo = response.stream()
 							.filter(gi -> gi.getName().equals(groupId)).findAny();
 					if (optionalGroupInfo.isEmpty()) {
-						returnToFirstStep(message);
-						return CompletableFuture.completedFuture(null);
+						return returnToFirstStepCF();
 					}
 					userInfo.setGroupId(groupId);
 					if (optionalGroupInfo.get().getSubgroups() > 0) {
 						return scheduleService.findDifferenceBetweenSubgroups(facultyId, optionalGroupInfo.get().getName())
-								.thenAccept(diff -> {
+								.thenApply(diff -> {
 									LessonCellMirror mirror1 = diff.getFirst();
 									LessonCellMirror mirror2 = diff.getSecond();
-									messageOutput.sendMessage(message.getUserId(),
-											(mirror2 != null ? stringProperties.getChooseSubgroup() :
-													stringProperties.getChooseSubgroupWindow()) + "\n" +
-													(mirror1.getWeekSign() != WeekSign.ANY ? String.format("%s (%s)\n",
-															mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
-																	Locale.forLanguageTag("ru-RU")).toUpperCase(), mirror1.getWeekSign()) :
-															mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
-																	Locale.forLanguageTag("ru-RU")).toUpperCase() + "\n"
-													) +
-													commonUtils.convertLessonCell(mirror1, false, true, true, false, false),
-											messageOutput.createKeyboard(true,
-													new KeyboardButton(KeyboardButton.Color.POSITIVE, stringProperties.getYes(),
-															objectMapper.createObjectNode()
-																	.put(ROUTE, NAME)
-																	.put("subgroup", diff.getFirstSubgroup())
-																	.toString()),
-													new KeyboardButton(KeyboardButton.Color.NEGATIVE, stringProperties.getNo(),
-															objectMapper.createObjectNode()
-																	.put(ROUTE, NAME)
-																	.put("subgroup", diff.getSecondSubgroup())
-																	.toString()))
-									);
-									userInfoLoadingCache.put(peerId, Pair.of(userInfo, 6));
+									String outMessage = (mirror2 != null ? stringProperties.getChooseSubgroup() :
+											stringProperties.getChooseSubgroupWindow()) + "\n" +
+											(mirror1.getWeekSign() != WeekSign.ANY ? String.format("%s (%s)\n",
+													mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
+															Locale.forLanguageTag("ru-RU")).toUpperCase(), mirror1.getWeekSign()) :
+													mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
+															Locale.forLanguageTag("ru-RU")).toUpperCase() + "\n"
+											) +
+											commonUtils.convertLessonCell(mirror1, false, true, true, false, false);
+									String keyboard = messageOutput.createKeyboard(true,
+											new KeyboardButton(KeyboardButton.Color.POSITIVE, stringProperties.getYes(),
+													objectMapper.createObjectNode()
+															.put(ROUTE, "/configure/step6")
+															.put("subgroup", diff.getFirstSubgroup())
+															.toString()),
+											new KeyboardButton(KeyboardButton.Color.NEGATIVE, stringProperties.getNo(),
+													objectMapper.createObjectNode()
+															.put(ROUTE, "/configure/step6")
+															.put("subgroup", diff.getSecondSubgroup())
+															.toString()));
+									return MessageResponse.builder()
+											.message(outMessage)
+											.keyboard(keyboard)
+											.build();
 								});
 					} else {
-						registerUser(message, userInfo);
-						return CompletableFuture.completedFuture(null);
+						return registerUser(message, userInfo);
 					}
 				})
 				.exceptionally(e -> {
 					log.error("step 5 error", e);
 					Sentry.capture(e);
-					return null;
+					return MessageResponse.builder()
+							.redirectTo("/")
+							.build();
 				});
 	}
 
-	private void step6(ExtendedMessage message, UserInfo userInfo) throws JsonProcessingException {
+	@RTMessageMapping("/step6")
+	public CompletionStage<MessageResponse> step6(ExtendedMessage message, @RTContainerEntity UserInfo userInfo) throws JsonProcessingException {
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode jsonNode = objectMapper.readTree(message.getPayload());
 		int subgroup = jsonNode.get("subgroup").asInt();
-		messageOutput.sendMessage(message.getUserId(),
-				String.format(stringProperties.getSubgroupNotify(), subgroup));
 		userInfo.setSubgroup(subgroup);
-		registerUser(message, userInfo);
+		return registerUser(message, userInfo)
+				.thenApplyAsync(mr ->
+						MessageResponse.builder()
+								.message(stringProperties.getSubgroupNotify())
+								.build()
+								.resolve(mr)
+				);
 	}
 
-	private void registerUser(ExtendedMessage message, UserInfo userInfo) {
+	private CompletionStage<MessageResponse> registerUser(ExtendedMessage message, UserInfo userInfo) {
 		service.save(userInfo);
 		log.info("Registered user {} with faculty {}, group {} and subgroup {}", message.getUserId(), userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup());
-		messageOutput.sendMessage(message.getUserId(), stringProperties.getSuccess());
-		userInfoLoadingCache.invalidate(message.getUserId());
-		messageRouter.routeMessageTo(message, MainMenuStage.NAME);
-	}
-
-	private void returnToFirstStep(ExtendedMessage message) {
-		userInfoLoadingCache.invalidate(message.getUserId());
-		accept(message);
-	}
-
-	@Override
-	public void accept(ExtendedMessage message) {
-		Integer peerId = message.getUserId();
-		if (message.getPayload() == null) {
-			userInfoLoadingCache.invalidate(peerId);
-		}
-		try {
-			Pair<UserInfo, Integer> pair = userInfoLoadingCache.get(peerId);
-			UserInfo userInfo = pair.getFirst();
-			int step = pair.getSecond();
-			switch (step) {
-				case 1:
-					step1(message, userInfo);
-					break;
-				case 2:
-					step2(message, userInfo);
-					break;
-				case 3:
-					step3(message, userInfo);
-					break;
-				case 4:
-					step4(message, userInfo);
-					break;
-				case 5:
-					step5(message, userInfo);
-					break;
-				case 6:
-					step6(message, userInfo);
-					break;
-			}
-		} catch (JsonProcessingException | ExecutionException e) {
-			userInfoLoadingCache.invalidate(peerId);
-			UserInfo userInfo = new UserInfo();
-			userInfo.setPeerId(message.getUserId());
-			step1(message, userInfo);
-		}
+		return CompletableFuture.completedFuture(MessageResponse.builder()
+				.message(stringProperties.getSuccess())
+				.set("userInfo", null)
+				.redirectTo("/home")
+				.build());
 	}
 }

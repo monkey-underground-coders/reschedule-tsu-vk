@@ -2,7 +2,7 @@ package com.a6raywa1cher.rescheduletsuvk.component.textquery;
 
 import com.a6raywa1cher.rescheduletsuvk.component.DefaultKeyboardsComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
-import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
+import com.a6raywa1cher.rescheduletsuvk.component.router.MessageResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.StringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
@@ -21,17 +21,15 @@ import java.util.concurrent.CompletionStage;
 @Component
 public class DefaultTextQueryExecutor implements TextQueryExecutor {
 	private static final Logger log = LoggerFactory.getLogger(DefaultTextQueryExecutor.class);
-	private MessageOutput messageOutput;
 	private ScheduleService scheduleService;
 	private StringsConfigProperties properties;
 	private FacultyService facultyService;
 	private DefaultKeyboardsComponent defaultKeyboardsComponent;
 
 	@Autowired
-	public DefaultTextQueryExecutor(MessageOutput messageOutput, ScheduleService scheduleService,
+	public DefaultTextQueryExecutor(ScheduleService scheduleService,
 	                                StringsConfigProperties properties, FacultyService facultyService,
 	                                DefaultKeyboardsComponent defaultKeyboardsComponent) {
-		this.messageOutput = messageOutput;
 		this.scheduleService = scheduleService;
 		this.properties = properties;
 		this.facultyService = facultyService;
@@ -39,20 +37,24 @@ public class DefaultTextQueryExecutor implements TextQueryExecutor {
 	}
 
 	@Override
-	public void getPair(UserInfo userInfo, ExtendedMessage extendedMessage, String groupId, LocalDate date) {
+	public CompletionStage<MessageResponse> getPair(UserInfo userInfo, ExtendedMessage extendedMessage, String groupId, LocalDate date) {
 		CompletionStage<GetGroupsResponse.GroupInfo> findGroup = facultyService.getGroupsStartsWith(userInfo.getFacultyId(), groupId);
-		findGroup.thenCompose(gi -> scheduleService.getScheduleFor(
+		return findGroup.thenCompose(gi -> scheduleService.getScheduleFor(
 				userInfo.getFacultyId(), gi.getName(), null, date, LocalDate.now().isEqual(date)))
-				.thenAccept(response -> {
+				.thenApply(response -> {
 					if (response.isEmpty()) {
-						messageOutput.sendMessage(extendedMessage.getUserId(),
-								properties.getLessonsNotFound(), defaultKeyboardsComponent.mainMenuStage());
+						return MessageResponse.builder()
+								.message(properties.getLessonsNotFound())
+								.keyboard(defaultKeyboardsComponent.mainMenuStage())
+								.build();
 					} else {
 						String prepared = properties.getGroupsEmoji() + ' ' +
 								findGroup.toCompletableFuture().getNow(null).getName() + ' ' +
 								response.get();
-						messageOutput.sendMessage(extendedMessage.getUserId(),
-								prepared, defaultKeyboardsComponent.mainMenuStage());
+						return MessageResponse.builder()
+								.message(prepared)
+								.keyboard(defaultKeyboardsComponent.mainMenuStage())
+								.build();
 					}
 				})
 				.exceptionally(e -> {

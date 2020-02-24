@@ -1,16 +1,24 @@
 package com.a6raywa1cher.rescheduletsuvk.component.router;
 
 import com.a6raywa1cher.rescheduletsuvk.filterstages.FilterStage;
-import com.a6raywa1cher.rescheduletsuvk.stages.PrimaryStage;
-import com.a6raywa1cher.rescheduletsuvk.stages.Stage;
+import lombok.SneakyThrows;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.stereotype.Component;
 
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletionStage;
+
+import static com.a6raywa1cher.rescheduletsuvk.component.router.PathMethods.resolve;
+
 @Component
 public class StageBeanPostProcessor implements BeanPostProcessor {
 	private MessageRouter messageRouter;
+
+	private Map<String, Class<?>> beanMap = new HashMap<>();
 
 	@Autowired
 	public StageBeanPostProcessor(MessageRouter messageRouter) {
@@ -18,16 +26,53 @@ public class StageBeanPostProcessor implements BeanPostProcessor {
 	}
 
 	@Override
-	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		Class<?> aClass = bean.getClass();
-		if (PrimaryStage.class.isAssignableFrom(aClass)) {
-			messageRouter.setPrimaryStage((PrimaryStage) bean);
-		}
-		if (Stage.class.isAssignableFrom(aClass)) {
-			messageRouter.addStage((Stage) bean, beanName);
+		if (aClass.isAnnotationPresent(RTStage.class)) {
+			beanMap.put(beanName, aClass);
 		}
 		if (FilterStage.class.isAssignableFrom(aClass)) {
 			messageRouter.addFilter((FilterStage) bean);
+		}
+		return bean;
+	}
+
+	private void checkMethod(Method method) {
+		if (!MessageResponse.class.isAssignableFrom(method.getReturnType()) &&
+				!CompletionStage.class.isAssignableFrom(method.getReturnType())) {
+			throw new RuntimeException(String.format("Invalid return type of %s, class %s",
+					method.getName(), method.getDeclaringClass().getName()));
+		}
+	}
+
+	@SneakyThrows
+	@Override
+	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		Class<?> aClass = beanMap.get(beanName);
+		if (aClass != null) {
+			RTStage rtStage = aClass.getAnnotation(RTStage.class);
+			String textQueryPath = rtStage.textQuery();
+			if (textQueryPath.equals("")) textQueryPath = null;
+			String prefix;
+			String givenPrefix = "";
+			if (aClass.isAnnotationPresent(RTMessageMapping.class)) {
+				RTMessageMapping messageMapping = aClass.getAnnotation(RTMessageMapping.class);
+				prefix = messageMapping.value();
+				givenPrefix = messageMapping.value();
+			} else {
+				prefix = beanName.toLowerCase();
+			}
+			for (Method method : aClass.getMethods()) {
+				if (method.isAnnotationPresent(RTMessageMapping.class)) {
+					checkMethod(method);
+					RTMessageMapping messageMapping = method.getAnnotation(RTMessageMapping.class);
+					String path = resolve(givenPrefix, messageMapping.value());
+					Method proxyMethod = bean.getClass().getMethod(method.getName(), method.getParameterTypes());
+					MappingMethodInfo mappingMethodInfo = new MappingMethodInfo(proxyMethod,
+							method, bean, path, textQueryPath);
+					messageRouter.addMapping(mappingMethodInfo);
+				}
+			}
 		}
 		return bean;
 	}

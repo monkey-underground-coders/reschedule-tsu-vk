@@ -8,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
-import static com.a6raywa1cher.rescheduletsuvk.stages.MainMenuStage.NAME;
+import static com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton.Color.PRIMARY;
+import static com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton.Color.SECONDARY;
+//import static com.a6raywa1cher.rescheduletsuvk.stages.MainMenuStage.NAME;
 
 @Component
 public class DefaultKeyboardsComponent {
@@ -22,20 +24,23 @@ public class DefaultKeyboardsComponent {
 		this.mainMenuStageProperties = mainMenuStageProperties;
 	}
 
-	public String mainMenuStage() {
+	private String getPayload(String path) {
 		ObjectMapper objectMapper = new ObjectMapper();
-		String basicPayload = objectMapper.createObjectNode()
-				.put(ROUTE, NAME)
+		return objectMapper.createObjectNode()
+				.put(ROUTE, path)
 				.toString();
+	}
+
+	public String mainMenuStage() {
 		return messageOutput.createKeyboard(false, new int[]{1, 1, 1, 1, 2, 2},
-				new KeyboardButton(KeyboardButton.Color.PRIMARY, mainMenuStageProperties.getGetSevenDays(), basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, mainMenuStageProperties.getGetTodayLessons(), basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, mainMenuStageProperties.getGetNextLesson(), basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, mainMenuStageProperties.getGetTomorrowLessons(), basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, mainMenuStageProperties.getGetTeacherLessons(), basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, mainMenuStageProperties.getGetRawSchedule(), basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, mainMenuStageProperties.getDropSettings(), basicPayload),
-				new KeyboardButton(KeyboardButton.Color.SECONDARY, mainMenuStageProperties.getGetInfo(), basicPayload)
+				new KeyboardButton(PRIMARY, mainMenuStageProperties.getGetSevenDays(), getPayload("/home/seven_days")),
+				new KeyboardButton(SECONDARY, mainMenuStageProperties.getGetTodayLessons(), getPayload("/home/today")),
+				new KeyboardButton(SECONDARY, mainMenuStageProperties.getGetNextLesson(), getPayload("/home/next")),
+				new KeyboardButton(SECONDARY, mainMenuStageProperties.getGetTomorrowLessons(), getPayload("/home/tomorrow")),
+				new KeyboardButton(SECONDARY, mainMenuStageProperties.getGetTeacherLessons(), getPayload("/home/teacher")),
+				new KeyboardButton(SECONDARY, mainMenuStageProperties.getGetRawSchedule(), getPayload("/home/raw")),
+				new KeyboardButton(SECONDARY, mainMenuStageProperties.getDropSettings(), getPayload("/home/drop")),
+				new KeyboardButton(SECONDARY, mainMenuStageProperties.getGetInfo(), getPayload("/home/"))
 		);
 	}
 }
