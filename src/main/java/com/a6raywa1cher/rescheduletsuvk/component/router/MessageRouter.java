@@ -12,5 +12,5 @@ public interface MessageRouter {
 
 	void routeMessage(ExtendedMessage message);
 
-	void routeMessageToPath(ExtendedMessage message, String path);
+//	void routeMessageToPath(ExtendedMessage message, String path);
 }

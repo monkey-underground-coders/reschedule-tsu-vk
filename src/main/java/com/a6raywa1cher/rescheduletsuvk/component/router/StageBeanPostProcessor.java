@@ -62,14 +62,24 @@ public class StageBeanPostProcessor implements BeanPostProcessor {
 			} else {
 				prefix = beanName.toLowerCase();
 			}
+			String defaultExceptionRedirect = "/";
+			if (aClass.isAssignableFrom(RTExceptionRedirect.class)) {
+				RTExceptionRedirect rtExceptionRedirect = aClass.getAnnotation(RTExceptionRedirect.class);
+				defaultExceptionRedirect = rtExceptionRedirect.value();
+			}
 			for (Method method : aClass.getMethods()) {
+				String exceptionRedirect = defaultExceptionRedirect;
+				if (method.isAnnotationPresent(RTExceptionRedirect.class)) {
+					RTExceptionRedirect rtExceptionRedirect = method.getAnnotation(RTExceptionRedirect.class);
+					exceptionRedirect = rtExceptionRedirect.value();
+				}
 				if (method.isAnnotationPresent(RTMessageMapping.class)) {
 					checkMethod(method);
 					RTMessageMapping messageMapping = method.getAnnotation(RTMessageMapping.class);
 					String path = resolve(givenPrefix, messageMapping.value());
 					Method proxyMethod = bean.getClass().getMethod(method.getName(), method.getParameterTypes());
 					MappingMethodInfo mappingMethodInfo = new MappingMethodInfo(proxyMethod,
-							method, bean, path, textQueryPath);
+							method, bean, path, textQueryPath, exceptionRedirect);
 					messageRouter.addMapping(mappingMethodInfo);
 				}
 			}

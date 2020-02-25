@@ -8,6 +8,9 @@ import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentry.Sentry;
+import io.sentry.event.Breadcrumb;
+import io.sentry.event.BreadcrumbBuilder;
+import io.sentry.event.EventBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +20,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
@@ -43,12 +47,31 @@ public class DefaultMessageRouter implements MessageRouter {
 		this.messageOutput = messageOutput;
 	}
 
-	public void routeMessageToPath(ExtendedMessage message, String path0) {
+	private static void invocationErrorRender(RequestInfo requestInfo, String errorMessage, UserState userState, Throwable e) {
+		log.error(errorMessage, e);
+		Sentry.capture(new EventBuilder()
+				.withMessage(errorMessage)
+				.withTimestamp(new Date())
+				.withExtra("req-uuid", requestInfo.getUuid())
+				.withBreadcrumbs(requestInfo.getBreadcrumbList())
+				.withExtra("userState", userState.toString())
+		);
+	}
+
+	public void routeMessageToPath(ExtendedMessage message, String path0, RequestInfo requestInfo) {
 		String path = normalizePath(path0);
+		requestInfo.getBreadcrumbList().add(new BreadcrumbBuilder()
+				.setMessage(path)
+				.setTimestamp(new Date())
+				.setCategory("route")
+				.setLevel(Breadcrumb.Level.INFO)
+				.setType(Breadcrumb.Type.DEFAULT)
+				.build()
+		);
 		MappingMethodInfo mappingMethodInfo = pathToMappingMap.get(path);
 		UserState userState = getUserState(message);
 		if (mappingMethodInfo == null) {
-			return;
+			throw new IllegalArgumentException("Wrong path " + path);
 		}
 		Method provider = mappingMethodInfo.getInfoProvider();
 		Object[] bakedParameters = new Object[provider.getParameterCount()];
@@ -76,12 +99,28 @@ public class DefaultMessageRouter implements MessageRouter {
 			Object o = mappingMethodInfo.getMethodToCall().invoke(mappingMethodInfo.getBean(), bakedParameters);
 			if (o == null) return;
 			Class<?> returnClass = o.getClass();
-			if (MessageResponse.class.isAssignableFrom(returnClass)) {
-				MessageResponse messageResponse = (MessageResponse) o;
-				acceptMessageResponse(message, mappingMethodInfo, messageResponse, userState);
-			} else if (CompletionStage.class.isAssignableFrom(returnClass)) {
-				CompletionStage<?> completionStage = (CompletionStage<?>) o;
+//			if (MessageResponse.class.isAssignableFrom(returnClass)) {
+//				MessageResponse messageResponse = (MessageResponse) o;
+//				acceptMessageResponse(message, mappingMethodInfo, messageResponse, userState, traceRoute);
+//			} else
+			if (CompletionStage.class.isAssignableFrom(returnClass) || MessageResponse.class.isAssignableFrom(returnClass)) {
+				CompletionStage<?> completionStage;
+				if (CompletionStage.class.isAssignableFrom(returnClass)) {
+					completionStage = (CompletionStage<?>) o;
+				} else {
+					completionStage = CompletableFuture.completedStage((MessageResponse) o);
+				}
 				completionStage
+						.thenApplyAsync(x -> x, executor)
+						.exceptionally(e -> {
+							invocationErrorRender(requestInfo, String.format("Error during invocation path \"%s\", user %d",
+									path, userState.getUserId()), userState, e);
+							if (!path.equals(mappingMethodInfo.getExceptionRedirect())) {
+								MessageResponse messageResponse = MessageResponse.builder().redirectTo(mappingMethodInfo.getExceptionRedirect()).build();
+								acceptMessageResponse(message, mappingMethodInfo, messageResponse, userState, requestInfo);
+							}
+							return null;
+						})
 						.thenAcceptAsync(o1 -> {
 							if (o1 == null) {
 								return;
@@ -90,12 +129,12 @@ public class DefaultMessageRouter implements MessageRouter {
 								log.error("Invalid return type! Path: {}", path);
 							} else {
 								MessageResponse messageResponse = (MessageResponse) o1;
-								acceptMessageResponse(message, mappingMethodInfo, messageResponse, userState);
+								acceptMessageResponse(message, mappingMethodInfo, messageResponse, userState, requestInfo);
 							}
 						}, executor)
 						.exceptionally(e -> {
-							log.error("Error during invocation path " + path + ", user " + userState.getUserId(), e);
-							Sentry.capture(e);
+							invocationErrorRender(requestInfo, String.format("Error during invocation path \"%s\", user %d",
+									path, userState.getUserId()), userState, e);
 							return null;
 						});
 			} else {
@@ -104,12 +143,14 @@ public class DefaultMessageRouter implements MessageRouter {
 		} catch (IllegalAccessException e) {
 			throw new RuntimeException("Invocation error", e);
 		} catch (InvocationTargetException e) {
-			log.error("Error during invocation path " + path + ", user " + userState.getUserId(), e);
-			throw new RuntimeException("Invocation error", e);
+			invocationErrorRender(requestInfo, String.format("Error during invocation path \"%s\", user %d",
+					path, userState.getUserId()), userState, e);
 		}
 	}
 
-	private void acceptMessageResponse(ExtendedMessage input, MappingMethodInfo processor, MessageResponse output, UserState userState) {
+	private void acceptMessageResponse(ExtendedMessage input, MappingMethodInfo processor, MessageResponse out,
+	                                   UserState userState, RequestInfo requestInfo) {
+		MessageResponse output = requestInfo.resolveMessageResponse(out).getPreviousMessageResponse();
 		if (output.getTextQueryParserPath() != null) {
 			userState.setTextQueryConsumerPath(output.getTextQueryParserPath());
 		} else if (processor.getDefaultTextQueryParserPath() != null) {
@@ -123,15 +164,20 @@ public class DefaultMessageRouter implements MessageRouter {
 				targetContainer.put(label, val);
 			}
 		});
-//		if (output.getMessage() != null) {
-//			messageOutput.sendMessage(output.getTo() == null ? userState.getUserId() : output.getTo(),
-//					output.getMessage(), output.getKeyboard());
-//		}
-		output.getMessages().forEach(m ->
-				messageOutput.sendMessage(output.getTo() == null ? userState.getUserId() : output.getTo(),
-						m, output.getKeyboard()));
 		if (output.getRedirectTo() != null) {
-			executor.execute(() -> routeMessageToPath(input, output.getRedirectTo()));
+			requestInfo.getPreviousMessageResponse().getContainerChanges().clear();
+			executor.execute(() -> {
+				try {
+					routeMessageToPath(input, output.getRedirectTo(), requestInfo);
+				} catch (Exception e) {
+					invocationErrorRender(requestInfo, "Catched exception during path routing", userState, e);
+					routeMessageToPath(input, "/", requestInfo);
+				}
+			});
+		} else {
+			output.getMessages().forEach(m ->
+					messageOutput.sendMessage(output.getTo() == null ? userState.getUserId() : output.getTo(),
+							m, output.getKeyboard()));
 		}
 	}
 
@@ -148,7 +194,7 @@ public class DefaultMessageRouter implements MessageRouter {
 	}
 
 	public void routeMessage(ExtendedMessage message) {
-		executor.execute(() -> $routeMessage(message));
+		executor.execute(() -> $routeMessage(message, new RequestInfo()));
 	}
 
 	private Optional<String> tryGatherPath(ExtendedMessage message) {
@@ -161,9 +207,9 @@ public class DefaultMessageRouter implements MessageRouter {
 		}
 	}
 
-	private void $routeMessage(ExtendedMessage message) {
+	private void $routeMessage(ExtendedMessage message, RequestInfo requestInfo) {
+		UserState userState = getUserState(message);
 		try {
-			UserState userState = getUserState(message);
 			for (FilterStage filterStage : filterStages) {
 				message = filterStage.process(message);
 				if (message == null) {
@@ -174,16 +220,15 @@ public class DefaultMessageRouter implements MessageRouter {
 			}
 			Optional<String> optionalPath = tryGatherPath(message);
 			if (optionalPath.isPresent()) {
-				routeMessageToPath(message, optionalPath.get());
+				routeMessageToPath(message, optionalPath.get(), requestInfo);
 			} else if (userState.getTextQueryConsumerPath() != null) {
-				routeMessageToPath(message, userState.getTextQueryConsumerPath());
+				routeMessageToPath(message, userState.getTextQueryConsumerPath(), requestInfo);
 			} else {
-				routeMessageToPath(message, "/");
+				routeMessageToPath(message, "/", requestInfo);
 			}
 		} catch (Exception e) {
-			log.error("Catched exception", e);
-			Sentry.capture(e);
-			routeMessageToPath(message, "/");
+			invocationErrorRender(requestInfo, "Catched exception during path routing", userState, e);
+			routeMessageToPath(message, "/", requestInfo);
 		}
 	}
 

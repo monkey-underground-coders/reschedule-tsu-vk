@@ -17,4 +17,6 @@ public class MappingMethodInfo {
 	private String mappingPath;
 
 	private String defaultTextQueryParserPath;
+
+	private String exceptionRedirect;
 }

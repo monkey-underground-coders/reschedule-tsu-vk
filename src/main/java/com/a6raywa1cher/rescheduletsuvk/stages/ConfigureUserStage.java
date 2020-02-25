@@ -95,20 +95,12 @@ public class ConfigureUserStage {
 							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
 							.set("userInfo", userInfo)
 							.build();
-				})
-				.exceptionally(e -> {
-					log.error("step 1 error", e);
-					Sentry.capture(e);
-					return MessageResponse.builder()
-							.redirectTo("/")
-							.build();
 				});
 	}
 
 	@RTMessageMapping("/step2")
 	public CompletionStage<MessageResponse> step2(ExtendedMessage message, @RTContainerEntity UserInfo userInfo)
 			throws JsonProcessingException {
-		Integer peerId = message.getUserId();
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode jsonNode = objectMapper.readTree(message.getPayload());
 		String facultyId;
@@ -132,20 +124,9 @@ public class ConfigureUserStage {
 									.put(ROUTE, "/configure/step3")
 									.toString()))
 							.collect(Collectors.toList());
-//					messageOutput.sendMessage(message.getUserId(),
-//							stringProperties.getChooseLevel(),
-//							messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})));
-//					userInfoLoadingCache.put(peerId, Pair.of(userInfo, 3));
 					return MessageResponse.builder()
 							.message(stringProperties.getChooseLevel())
 							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
-							.build();
-				})
-				.exceptionally(e -> {
-					log.error("step 2 error", e);
-					Sentry.capture(e);
-					return MessageResponse.builder()
-							.redirectTo("/")
 							.build();
 				});
 	}
@@ -183,20 +164,12 @@ public class ConfigureUserStage {
 							.message(stringProperties.getChooseCourse())
 							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
 							.build();
-				})
-				.exceptionally(e -> {
-					log.error("step 3 error", e);
-					Sentry.capture(e);
-					return MessageResponse.builder()
-							.redirectTo("/")
-							.build();
 				});
 	}
 
 	@RTMessageMapping("/step4")
 	public CompletionStage<MessageResponse> step4(ExtendedMessage message, @RTContainerEntity UserInfo userInfo)
 			throws JsonProcessingException {
-		Integer peerId = message.getUserId();
 		ObjectMapper objectMapper = new ObjectMapper();
 		String course = message.getBody();
 		JsonNode payload = objectMapper.readTree(message.getPayload());
@@ -225,20 +198,12 @@ public class ConfigureUserStage {
 							.message(stringProperties.getChooseGroup())
 							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
 							.build();
-				})
-				.exceptionally(e -> {
-					log.error("step 4 error", e);
-					Sentry.capture(e);
-					return MessageResponse.builder()
-							.redirectTo("/")
-							.build();
 				});
 	}
 
 	@RTMessageMapping("/step5")
 	public CompletionStage<MessageResponse> step5(ExtendedMessage message, @RTContainerEntity UserInfo userInfo)
 			throws JsonProcessingException {
-		Integer peerId = message.getUserId();
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode payload = objectMapper.readTree(message.getPayload());
 		String groupId = payload.get("groupName").asText();
@@ -287,13 +252,6 @@ public class ConfigureUserStage {
 					} else {
 						return registerUser(message, userInfo);
 					}
-				})
-				.exceptionally(e -> {
-					log.error("step 5 error", e);
-					Sentry.capture(e);
-					return MessageResponse.builder()
-							.redirectTo("/")
-							.build();
 				});
 	}
 
