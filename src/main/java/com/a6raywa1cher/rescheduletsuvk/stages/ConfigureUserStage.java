@@ -264,7 +264,7 @@ public class ConfigureUserStage {
 		return registerUser(message, userInfo)
 				.thenApplyAsync(mr ->
 						MessageResponse.builder()
-								.message(stringProperties.getSubgroupNotify())
+								.message(String.format(stringProperties.getSubgroupNotify(), subgroup))
 								.build()
 								.resolve(mr)
 				);

@@ -53,7 +53,7 @@ public class DefaultMessageRouter implements MessageRouter {
 				.withMessage(errorMessage)
 				.withTimestamp(new Date())
 				.withExtra("req-uuid", requestInfo.getUuid())
-				.withBreadcrumbs(requestInfo.getBreadcrumbList())
+				.withBreadcrumbs(new LinkedList<>(requestInfo.getBreadcrumbList()))
 				.withExtra("userState", userState.toString())
 		);
 	}
@@ -65,7 +65,7 @@ public class DefaultMessageRouter implements MessageRouter {
 				.setTimestamp(new Date())
 				.setCategory("route")
 				.setLevel(Breadcrumb.Level.INFO)
-				.setType(Breadcrumb.Type.DEFAULT)
+				.setType(Breadcrumb.Type.NAVIGATION)
 				.build()
 		);
 		MappingMethodInfo mappingMethodInfo = pathToMappingMap.get(path);
