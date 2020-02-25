@@ -1,6 +1,7 @@
 package com.a6raywa1cher.rescheduletsuvk.component.router;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
+import com.a6raywa1cher.rescheduletsuvk.component.MetricsRegistrar;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.filterstages.FilterStage;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
@@ -14,6 +15,7 @@ import io.sentry.event.EventBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.InvocationTargetException;
@@ -36,6 +38,9 @@ public class DefaultMessageRouter implements MessageRouter {
 	private Map<Integer, UserState> userStateMap;
 	private MessageOutput messageOutput;
 	private UserInfoService userInfoService;
+	@Autowired
+	@Lazy
+	private MetricsRegistrar metricsRegistrar;
 
 	@Autowired
 	public DefaultMessageRouter(MessageOutput messageOutput, UserInfoService userInfoService) {
@@ -60,6 +65,7 @@ public class DefaultMessageRouter implements MessageRouter {
 
 	public void routeMessageToPath(ExtendedMessage message, String path0, RequestInfo requestInfo) {
 		String path = normalizePath(path0);
+		metricsRegistrar.registerPath(path);
 		requestInfo.getBreadcrumbList().add(new BreadcrumbBuilder()
 				.setMessage(path)
 				.setTimestamp(new Date())
@@ -178,6 +184,7 @@ public class DefaultMessageRouter implements MessageRouter {
 			output.getMessages().forEach(m ->
 					messageOutput.sendMessage(output.getTo() == null ? userState.getUserId() : output.getTo(),
 							m, output.getKeyboard()));
+			metricsRegistrar.registerTimeConsumed(System.currentTimeMillis() - requestInfo.getStart());
 		}
 	}
 

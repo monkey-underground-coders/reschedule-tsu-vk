@@ -3,8 +3,9 @@ package com.a6raywa1cher.rescheduletsuvk.component.router;
 import com.a6raywa1cher.rescheduletsuvk.filterstages.FilterStage;
 import lombok.SneakyThrows;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
@@ -15,24 +16,20 @@ import java.util.concurrent.CompletionStage;
 import static com.a6raywa1cher.rescheduletsuvk.component.router.PathMethods.resolve;
 
 @Component
+@Order(Ordered.LOWEST_PRECEDENCE)
 public class StageBeanPostProcessor implements BeanPostProcessor {
 	private MessageRouter messageRouter;
 
 	private Map<String, Class<?>> beanMap = new HashMap<>();
 
-	@Autowired
-	public StageBeanPostProcessor(MessageRouter messageRouter) {
-		this.messageRouter = messageRouter;
-	}
-
 	@Override
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		Class<?> aClass = bean.getClass();
-		if (aClass.isAnnotationPresent(RTStage.class)) {
+		if (aClass.isAnnotationPresent(RTStage.class) || FilterStage.class.isAssignableFrom(aClass)) {
 			beanMap.put(beanName, aClass);
 		}
-		if (FilterStage.class.isAssignableFrom(aClass)) {
-			messageRouter.addFilter((FilterStage) bean);
+		if (MessageRouter.class.isAssignableFrom(aClass)) {
+			messageRouter = (MessageRouter) bean;
 		}
 		return bean;
 	}
@@ -50,6 +47,10 @@ public class StageBeanPostProcessor implements BeanPostProcessor {
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
 		Class<?> aClass = beanMap.get(beanName);
 		if (aClass != null) {
+			if (FilterStage.class.isAssignableFrom(aClass)) {
+				messageRouter.addFilter((FilterStage) bean);
+				return bean;
+			}
 			RTStage rtStage = aClass.getAnnotation(RTStage.class);
 			String textQueryPath = rtStage.textQuery();
 			if (textQueryPath.equals("")) textQueryPath = null;

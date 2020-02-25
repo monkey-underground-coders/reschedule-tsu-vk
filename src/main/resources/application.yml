@@ -8,6 +8,11 @@ app:
   rts-url: ---
   activate-dialogflow: false
   red-faculties: []
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
 # ===============================
 # DB CONNECTION
 # ===============================

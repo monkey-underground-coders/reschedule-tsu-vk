@@ -11,6 +11,8 @@ import java.util.UUID;
 public class RequestInfo {
 	private final String uuid = UUID.randomUUID().toString();
 
+	private final long start = System.currentTimeMillis();
+
 	private List<Breadcrumb> breadcrumbList = new LinkedList<>();
 
 	private MessageResponse previousMessageResponse = null;
