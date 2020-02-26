@@ -3,7 +3,9 @@ package com.a6raywa1cher.rescheduletsuvk.component.router;
 import com.a6raywa1cher.rescheduletsuvk.filterstages.FilterStage;
 import lombok.SneakyThrows;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -18,6 +20,8 @@ import static com.a6raywa1cher.rescheduletsuvk.component.router.PathMethods.reso
 @Component
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class StageBeanPostProcessor implements BeanPostProcessor {
+	@Autowired
+	@Lazy
 	private MessageRouter messageRouter;
 
 	private Map<String, Class<?>> beanMap = new HashMap<>();
@@ -27,9 +31,6 @@ public class StageBeanPostProcessor implements BeanPostProcessor {
 		Class<?> aClass = bean.getClass();
 		if (aClass.isAnnotationPresent(RTStage.class) || FilterStage.class.isAssignableFrom(aClass)) {
 			beanMap.put(beanName, aClass);
-		}
-		if (MessageRouter.class.isAssignableFrom(aClass)) {
-			messageRouter = (MessageRouter) bean;
 		}
 		return bean;
 	}
