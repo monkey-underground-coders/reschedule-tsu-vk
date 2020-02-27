@@ -66,6 +66,7 @@ public class DefaultMessageRouter implements MessageRouter {
 	public void routeMessageToPath(ExtendedMessage message, String path0, RequestInfo requestInfo) {
 		String path = normalizePath(path0);
 		metricsRegistrar.registerPath(path);
+		metricsRegistrar.registerUserCall(message.getUserId());
 		requestInfo.getBreadcrumbList().add(new BreadcrumbBuilder()
 				.setMessage(path)
 				.setTimestamp(new Date())
