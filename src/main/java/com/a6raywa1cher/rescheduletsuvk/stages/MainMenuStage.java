@@ -20,7 +20,7 @@ import java.util.concurrent.CompletionStage;
 @Component
 @RTStage(textQuery = "/home/tq")
 @RTMessageMapping("/home")
-@RTExceptionRedirect("/home/info")
+@RTExceptionRedirect("/")
 public class MainMenuStage {
 	private static final Logger log = LoggerFactory.getLogger(MainMenuStage.class);
 	private UserInfoService service;

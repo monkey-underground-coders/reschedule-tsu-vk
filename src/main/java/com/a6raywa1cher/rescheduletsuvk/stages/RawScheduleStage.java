@@ -1,11 +1,11 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
-import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.router.RTMessageMapping;
 import com.a6raywa1cher.rescheduletsuvk.component.router.RTStage;
+import com.a6raywa1cher.rescheduletsuvk.component.rts.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
 import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.RawScheduleStageStringsConfigProperties;

@@ -1,6 +1,7 @@
 package com.a6raywa1cher.rescheduletsuvk.services.impls;
 
-import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
+import com.a6raywa1cher.rescheduletsuvk.component.rts.NotFoundException;
+import com.a6raywa1cher.rescheduletsuvk.component.rts.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetFacultiesResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.FacultyService;
@@ -38,6 +39,9 @@ public class FacultyServiceImpl implements FacultyService {
 				.exceptionally(e -> {
 					log.error("Get groups error", e);
 					Sentry.capture(e);
+					if (e.getCause() != null && e.getCause() instanceof NotFoundException) {
+						throw (NotFoundException) e.getCause();
+					}
 					return new ArrayList<>();
 				});
 	}

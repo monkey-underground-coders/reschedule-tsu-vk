@@ -1,6 +1,7 @@
 package com.a6raywa1cher.rescheduletsuvk.services.impls;
 
-import com.a6raywa1cher.rescheduletsuvk.component.RtsServerRestComponent;
+import com.a6raywa1cher.rescheduletsuvk.component.rts.NotFoundException;
+import com.a6raywa1cher.rescheduletsuvk.component.rts.RtsServerRestComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetScheduleForWeekResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
@@ -67,6 +68,9 @@ public class ScheduleServiceImpl implements ScheduleService {
 							+ subgroup + ", "
 							+ date.toString() + " error", e);
 					Sentry.capture(e);
+					if (e.getCause() != null && e.getCause() instanceof NotFoundException) {
+						throw (NotFoundException) e.getCause();
+					}
 					return Optional.empty();
 				});
 	}
@@ -94,6 +98,9 @@ public class ScheduleServiceImpl implements ScheduleService {
 							+ subgroup + ", "
 							+ localDateTime.toString() + " error", e);
 					Sentry.capture(e);
+					if (e.getCause() != null && e.getCause() instanceof NotFoundException) {
+						throw (NotFoundException) e.getCause();
+					}
 					return Optional.empty();
 				});
 	}
@@ -119,6 +126,9 @@ public class ScheduleServiceImpl implements ScheduleService {
 							+ subgroup + ", "
 							+ date.toString() + " error", e);
 					Sentry.capture(e);
+					if (e.getCause() != null && e.getCause() instanceof NotFoundException) {
+						throw (NotFoundException) e.getCause();
+					}
 					return null;
 				});
 	}
@@ -130,6 +140,9 @@ public class ScheduleServiceImpl implements ScheduleService {
 					log.error("Get raw schedule for " + faculty + ", "
 							+ group + ", error", e);
 					Sentry.capture(e);
+					if (e.getCause() != null && e.getCause() instanceof NotFoundException) {
+						throw (NotFoundException) e.getCause();
+					}
 					return new ArrayList<>();
 				});
 	}

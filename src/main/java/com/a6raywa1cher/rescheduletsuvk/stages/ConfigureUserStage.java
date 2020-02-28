@@ -2,7 +2,10 @@ package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
-import com.a6raywa1cher.rescheduletsuvk.component.router.*;
+import com.a6raywa1cher.rescheduletsuvk.component.router.MessageResponse;
+import com.a6raywa1cher.rescheduletsuvk.component.router.RTContainerEntity;
+import com.a6raywa1cher.rescheduletsuvk.component.router.RTMessageMapping;
+import com.a6raywa1cher.rescheduletsuvk.component.router.RTStage;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetGroupsResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.WeekSign;
@@ -48,7 +51,6 @@ public class ConfigureUserStage {
 	public String courseRegex;
 	private MessageOutput messageOutput;
 	private UserInfoService service;
-	private MessageRouter messageRouter;
 	private AppConfigProperties properties;
 	private ConfigureUserStageStringsConfigProperties stringProperties;
 	private ScheduleService scheduleService;
@@ -57,12 +59,11 @@ public class ConfigureUserStage {
 
 	@Autowired
 	public ConfigureUserStage(MessageOutput messageOutput, UserInfoService service,
-	                          MessageRouter messageRouter, AppConfigProperties properties,
+	                          AppConfigProperties properties,
 	                          ConfigureUserStageStringsConfigProperties stringProperties, ScheduleService scheduleService,
 	                          FacultyService facultyService, CommonUtils commonUtils) {
 		this.messageOutput = messageOutput;
 		this.service = service;
-		this.messageRouter = messageRouter;
 		this.properties = properties;
 		this.stringProperties = stringProperties;
 		this.scheduleService = scheduleService;
@@ -72,6 +73,8 @@ public class ConfigureUserStage {
 
 	@RTMessageMapping("/step1")
 	public CompletionStage<MessageResponse> step1(ExtendedMessage message) {
+		Optional<UserInfo> optional = service.getById(message.getUserId());
+		optional.ifPresent(userInfo -> service.delete(userInfo));
 		UserInfo userInfo = new UserInfo();
 		userInfo.setPeerId(message.getUserId());
 		return facultyService.getFacultiesList()

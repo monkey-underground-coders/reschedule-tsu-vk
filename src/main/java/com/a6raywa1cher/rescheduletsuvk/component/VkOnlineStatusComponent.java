@@ -1,5 +1,6 @@
 package com.a6raywa1cher.rescheduletsuvk.component;
 
+import com.a6raywa1cher.rescheduletsuvk.component.rts.RtsServerRestComponent;
 import com.vk.api.sdk.client.AbstractQueryBuilder;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
