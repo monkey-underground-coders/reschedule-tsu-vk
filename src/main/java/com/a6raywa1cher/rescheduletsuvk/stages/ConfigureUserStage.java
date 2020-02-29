@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import java.time.format.TextStyle;
@@ -81,20 +82,26 @@ public class ConfigureUserStage {
 				.thenApply(response -> {
 					List<KeyboardButton> buttons = new ArrayList<>();
 					ObjectMapper objectMapper = new ObjectMapper();
+					List<String> facultiesList = new ArrayList<>(response.size());
+					int[] index = new int[1];
 					response.stream()
 							.sorted()
+							.sequential()
 							.forEach(facultyId -> {
 								boolean red = properties.getRedFaculties().contains(facultyId);
+								String str = (index[0] + 1) + ": " + facultyId;
+								facultiesList.add(str);
 								buttons.add(new KeyboardButton(
 										red ? KeyboardButton.Color.NEGATIVE : KeyboardButton.Color.SECONDARY,
-										facultyId,
+										str,
 										objectMapper.createObjectNode()
 												.put("facultyId", facultyId)
 												.put(ROUTE, "/configure/step2")
 												.toString()));
+								index[0]++;
 							});
 					return MessageResponse.builder()
-							.message(stringProperties.getChooseFaculty())
+							.message(String.format(stringProperties.getChooseFaculty(), String.join("\n", facultiesList)))
 							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
 							.set("userInfo", userInfo)
 							.build();
@@ -144,7 +151,6 @@ public class ConfigureUserStage {
 
 	@RTMessageMapping("/step3")
 	public CompletionStage<MessageResponse> step3(ExtendedMessage message, @RTContainerEntity UserInfo userInfo) {
-		Integer peerId = message.getUserId();
 		ObjectMapper objectMapper = new ObjectMapper();
 		String level = message.getBody();
 		if (level == null || (!level.equals("Бакалавриат | Специалитет") && !level.equals("Магистратура"))) {
@@ -183,22 +189,26 @@ public class ConfigureUserStage {
 		}
 		return facultyService.getGroupsList(userInfo.getFacultyId())
 				.thenApply(response -> {
+					List<String> groupList = new ArrayList<>(response.size());
+					int[] index = new int[1];
 					List<KeyboardButton> buttons = response.stream()
 							.filter(gi -> gi.getLevel().equals(level))
 							.filter(gi -> gi.getCourse().equals(Integer.parseInt(course)))
 							.map(GetGroupsResponse.GroupInfo::getName)
 							.distinct()
 							.sorted()
-							.map(groupName -> new KeyboardButton(KeyboardButton.Color.SECONDARY,
-									groupName.length() >= 40 ? groupName.substring(0, 20) + "..." +
-											groupName.substring(groupName.length() - 15) : groupName,
+							.sequential()
+							.map(groupName -> Pair.of(groupName, ((index[0]++) + 1) + ": " + groupName))
+							.peek(pair -> groupList.add(pair.getSecond()))
+							.map(pair -> new KeyboardButton(KeyboardButton.Color.SECONDARY,
+									pair.getSecond(),
 									objectMapper.createObjectNode()
 											.put(ROUTE, "/configure/step5")
-											.put("groupName", groupName)
+											.put("groupName", pair.getFirst())
 											.toString()))
 							.collect(Collectors.toList());
 					return MessageResponse.builder()
-							.message(stringProperties.getChooseGroup())
+							.message(String.format(stringProperties.getChooseGroup(), String.join("\n", groupList)))
 							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
 							.build();
 				});

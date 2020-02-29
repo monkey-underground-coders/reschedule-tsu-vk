@@ -40,7 +40,7 @@ public class MetricsRegistrar {
 		users.add(userId);
 	}
 
-	@Scheduled(fixedRate = 1000 * 60 * 30)
+	@Scheduled(cron = "0 0 4 * * *")
 	public void updateUserStats() {
 		users.clear();
 	}
