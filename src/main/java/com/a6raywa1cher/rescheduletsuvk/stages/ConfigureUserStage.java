@@ -1,6 +1,7 @@
 package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
+import com.a6raywa1cher.rescheduletsuvk.component.keyboard.KeyboardButton;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.MessageResponse;
 import com.a6raywa1cher.rescheduletsuvk.component.router.RTContainerEntity;
@@ -16,7 +17,6 @@ import com.a6raywa1cher.rescheduletsuvk.services.interfaces.FacultyService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.ScheduleService;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
-import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

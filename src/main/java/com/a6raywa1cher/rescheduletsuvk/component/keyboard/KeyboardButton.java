@@ -1,4 +1,4 @@
-package com.a6raywa1cher.rescheduletsuvk.utils;
+package com.a6raywa1cher.rescheduletsuvk.component.keyboard;
 
 import lombok.Data;
 

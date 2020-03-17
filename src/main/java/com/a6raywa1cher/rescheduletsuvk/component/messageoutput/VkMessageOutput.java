@@ -1,6 +1,6 @@
 package com.a6raywa1cher.rescheduletsuvk.component.messageoutput;
 
-import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
+import com.a6raywa1cher.rescheduletsuvk.component.keyboard.KeyboardButton;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;

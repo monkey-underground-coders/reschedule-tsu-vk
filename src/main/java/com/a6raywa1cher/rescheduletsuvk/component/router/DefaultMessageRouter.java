@@ -1,8 +1,8 @@
 package com.a6raywa1cher.rescheduletsuvk.component.router;
 
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
-import com.a6raywa1cher.rescheduletsuvk.component.MetricsRegistrar;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
+import com.a6raywa1cher.rescheduletsuvk.component.metrics.MetricsRegistrar;
 import com.a6raywa1cher.rescheduletsuvk.filterstages.FilterStage;
 import com.a6raywa1cher.rescheduletsuvk.models.UserInfo;
 import com.a6raywa1cher.rescheduletsuvk.services.interfaces.UserInfoService;

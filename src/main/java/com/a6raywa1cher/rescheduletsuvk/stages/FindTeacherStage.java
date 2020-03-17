@@ -2,6 +2,7 @@ package com.a6raywa1cher.rescheduletsuvk.stages;
 
 import com.a6raywa1cher.rescheduletsuvk.component.DefaultKeyboardsComponent;
 import com.a6raywa1cher.rescheduletsuvk.component.ExtendedMessage;
+import com.a6raywa1cher.rescheduletsuvk.component.keyboard.KeyboardButton;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.component.router.*;
 import com.a6raywa1cher.rescheduletsuvk.component.rts.RtsServerRestComponent;
@@ -9,7 +10,6 @@ import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.GetScheduleOfTeacher
 import com.a6raywa1cher.rescheduletsuvk.component.rtsmodels.LessonCellMirror;
 import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.FindTeacherStageStringsConfigProperties;
 import com.a6raywa1cher.rescheduletsuvk.utils.CommonUtils;
-import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;

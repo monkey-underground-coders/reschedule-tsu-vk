@@ -1,6 +1,8 @@
 package com.a6raywa1cher.rescheduletsuvk.component.messageoutput;
 
-import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
+import com.a6raywa1cher.rescheduletsuvk.component.keyboard.KeyboardButton;
+
+import java.util.List;
 
 public interface MessageOutput {
 	String createKeyboard(boolean oneTime, KeyboardButton... buttonsDescriptions);

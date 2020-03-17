@@ -1,16 +1,15 @@
 package com.a6raywa1cher.rescheduletsuvk.component;
 
+import com.a6raywa1cher.rescheduletsuvk.component.keyboard.KeyboardButton;
 import com.a6raywa1cher.rescheduletsuvk.component.messageoutput.MessageOutput;
 import com.a6raywa1cher.rescheduletsuvk.config.stringconfigs.MainMenuStageStringsConfigProperties;
-import com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import static com.a6raywa1cher.rescheduletsuvk.component.keyboard.KeyboardButton.Color.PRIMARY;
+import static com.a6raywa1cher.rescheduletsuvk.component.keyboard.KeyboardButton.Color.SECONDARY;
 import static com.a6raywa1cher.rescheduletsuvk.component.router.MessageRouter.ROUTE;
-import static com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton.Color.PRIMARY;
-import static com.a6raywa1cher.rescheduletsuvk.utils.KeyboardButton.Color.SECONDARY;
-//import static com.a6raywa1cher.rescheduletsuvk.stages.MainMenuStage.NAME;
 
 @Component
 public class DefaultKeyboardsComponent {
