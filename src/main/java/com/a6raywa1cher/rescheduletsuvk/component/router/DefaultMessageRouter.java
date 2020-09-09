@@ -55,11 +55,11 @@ public class DefaultMessageRouter implements MessageRouter {
 	private static void invocationErrorRender(RequestInfo requestInfo, String errorMessage, UserState userState, Throwable e) {
 		log.error(errorMessage, e);
 		Sentry.capture(new EventBuilder()
-				.withMessage(errorMessage)
-				.withTimestamp(new Date())
-				.withExtra("req-uuid", requestInfo.getUuid())
-				.withBreadcrumbs(new LinkedList<>(requestInfo.getBreadcrumbList()))
-				.withExtra("userState", userState.toString())
+			.withMessage(errorMessage)
+			.withTimestamp(new Date())
+			.withExtra("req-uuid", requestInfo.getUuid())
+			.withBreadcrumbs(new LinkedList<>(requestInfo.getBreadcrumbList()))
+			.withExtra("userState", userState.toString())
 		);
 	}
 
@@ -68,12 +68,12 @@ public class DefaultMessageRouter implements MessageRouter {
 		metricsRegistrar.registerPath(path);
 		metricsRegistrar.registerUserCall(message.getUserId());
 		requestInfo.getBreadcrumbList().add(new BreadcrumbBuilder()
-				.setMessage(path)
-				.setTimestamp(new Date())
-				.setCategory("route")
-				.setLevel(Breadcrumb.Level.INFO)
-				.setType(Breadcrumb.Type.NAVIGATION)
-				.build()
+			.setMessage(path)
+			.setTimestamp(new Date())
+			.setCategory("route")
+			.setLevel(Breadcrumb.Level.INFO)
+			.setType(Breadcrumb.Type.NAVIGATION)
+			.build()
 		);
 		MappingMethodInfo mappingMethodInfo = pathToMappingMap.get(path);
 		UserState userState = getUserState(message);
@@ -118,32 +118,32 @@ public class DefaultMessageRouter implements MessageRouter {
 					completionStage = CompletableFuture.completedStage((MessageResponse) o);
 				}
 				completionStage
-						.thenApplyAsync(x -> x, executor)
-						.exceptionally(e -> {
-							invocationErrorRender(requestInfo, String.format("Error during invocation path \"%s\", user %d",
-									path, userState.getUserId()), userState, e);
-							if (!path.equals(mappingMethodInfo.getExceptionRedirect())) {
-								MessageResponse messageResponse = MessageResponse.builder().redirectTo(mappingMethodInfo.getExceptionRedirect()).build();
-								acceptMessageResponse(message, mappingMethodInfo, messageResponse, userState, requestInfo);
-							}
-							return null;
-						})
-						.thenAcceptAsync(o1 -> {
-							if (o1 == null) {
-								return;
-							}
-							if (!MessageResponse.class.isAssignableFrom(o1.getClass())) {
-								log.error("Invalid return type! Path: {}", path);
-							} else {
-								MessageResponse messageResponse = (MessageResponse) o1;
-								acceptMessageResponse(message, mappingMethodInfo, messageResponse, userState, requestInfo);
-							}
-						}, executor)
-						.exceptionally(e -> {
-							invocationErrorRender(requestInfo, String.format("Error during invocation path \"%s\", user %d",
-									path, userState.getUserId()), userState, e);
-							return null;
-						});
+					.thenApplyAsync(x -> x, executor)
+					.exceptionally(e -> {
+						invocationErrorRender(requestInfo, String.format("Error during invocation path \"%s\", user %d",
+							path, userState.getUserId()), userState, e);
+						if (!path.equals(mappingMethodInfo.getExceptionRedirect())) {
+							MessageResponse messageResponse = MessageResponse.builder().redirectTo(mappingMethodInfo.getExceptionRedirect()).build();
+							acceptMessageResponse(message, mappingMethodInfo, messageResponse, userState, requestInfo);
+						}
+						return null;
+					})
+					.thenAcceptAsync(o1 -> {
+						if (o1 == null) {
+							return;
+						}
+						if (!MessageResponse.class.isAssignableFrom(o1.getClass())) {
+							log.error("Invalid return type! Path: {}", path);
+						} else {
+							MessageResponse messageResponse = (MessageResponse) o1;
+							acceptMessageResponse(message, mappingMethodInfo, messageResponse, userState, requestInfo);
+						}
+					}, executor)
+					.exceptionally(e -> {
+						invocationErrorRender(requestInfo, String.format("Error during invocation path \"%s\", user %d",
+							path, userState.getUserId()), userState, e);
+						return null;
+					});
 			} else {
 				throw new RuntimeException("Invalid return type! Path: " + path);
 			}
@@ -151,12 +151,12 @@ public class DefaultMessageRouter implements MessageRouter {
 			throw new RuntimeException("Invocation error", e);
 		} catch (InvocationTargetException e) {
 			invocationErrorRender(requestInfo, String.format("Error during invocation path \"%s\", user %d",
-					path, userState.getUserId()), userState, e);
+				path, userState.getUserId()), userState, e);
 		}
 	}
 
 	private void acceptMessageResponse(ExtendedMessage input, MappingMethodInfo processor, MessageResponse out,
-	                                   UserState userState, RequestInfo requestInfo) {
+									   UserState userState, RequestInfo requestInfo) {
 		MessageResponse output = requestInfo.resolveMessageResponse(out).getPreviousMessageResponse();
 		if (output.getTextQueryParserPath() != null) {
 			userState.setTextQueryConsumerPath(output.getTextQueryParserPath());
@@ -183,8 +183,8 @@ public class DefaultMessageRouter implements MessageRouter {
 			});
 		} else {
 			output.getMessages().forEach(m ->
-					messageOutput.sendMessage(output.getTo() == null ? userState.getUserId() : output.getTo(),
-							m, output.getKeyboard()));
+				messageOutput.sendMessage(output.getTo() == null ? userState.getUserId() : output.getTo(),
+					m, output.getKeyboard()));
 			metricsRegistrar.registerTimeConsumed(System.currentTimeMillis() - requestInfo.getStart());
 		}
 	}
@@ -222,7 +222,7 @@ public class DefaultMessageRouter implements MessageRouter {
 				message = filterStage.process(message);
 				if (message == null) {
 					log.info("FilterStage {} stopped processing of {}'s message",
-							filterStage.getClass().toString(), userState.getUserId());
+						filterStage.getClass().toString(), userState.getUserId());
 					return;
 				}
 			}

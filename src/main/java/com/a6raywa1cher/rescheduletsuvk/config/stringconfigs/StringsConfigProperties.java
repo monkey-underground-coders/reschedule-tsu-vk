@@ -33,6 +33,10 @@ public class StringsConfigProperties {
 	@NotBlank
 	private String groupsEmoji;
 	@NotBlank
+	private String remoteEmoji;
+	@NotBlank
+	private String attributesEmoji;
+	@NotBlank
 	private String lessonsNotFound;
 	@NotNull
 	@Size(min = 10, max = 10)

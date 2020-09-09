@@ -18,7 +18,7 @@ public class EasterEggFilterStage implements FilterStage {
 	public ExtendedMessage process(ExtendedMessage extendedMessage) {
 		if (extendedMessage.getBody().toLowerCase().strip().equals("спасибо")) {
 			messageOutput.sendMessage(extendedMessage.getUserId(),
-					"Рад стараться :)");
+				"Рад стараться :)");
 		}
 		if (extendedMessage.getBody().toLowerCase().strip().equals("солдис")) {
 			extendedMessage.setBody("Солдатенко");

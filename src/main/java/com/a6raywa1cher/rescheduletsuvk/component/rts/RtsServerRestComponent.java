@@ -69,7 +69,7 @@ public class RtsServerRestComponent {
 	private <T> CompletionStage<T> request(String url, TypeReference<T> typeReference) {
 		return CompletableFuture.supplyAsync(() -> {
 			ObjectMapper objectMapper = new ObjectMapper()
-					.registerModule(new JavaTimeModule());
+				.registerModule(new JavaTimeModule());
 			try {
 				URI src = this.rts.resolve(url);
 				ResponseEntity<String> result;
@@ -100,13 +100,13 @@ public class RtsServerRestComponent {
 
 	public CompletionStage<GetScheduleForWeekResponse> getScheduleForWeek(String facultyId, String groupId) {
 		return request("faculties/" + encodeValue(facultyId) + "/groups/" + encodeValue(groupId) + "/week",
-				GetScheduleForWeekResponse.class);
+			GetScheduleForWeekResponse.class);
 	}
 
 	public CompletionStage<GetScheduleForWeekResponse> getScheduleForWeek(String facultyId, String groupId, LocalDate date) {
 		return request("faculties/" + encodeValue(facultyId) + "/groups/" + encodeValue(groupId) + "/week" +
-						"?day=" + date.format(DateTimeFormatter.ISO_DATE),
-				GetScheduleForWeekResponse.class);
+				"?day=" + date.format(DateTimeFormatter.ISO_DATE),
+			GetScheduleForWeekResponse.class);
 	}
 
 	public CompletionStage<GetGroupsResponse> getGroups(String facultyId) {
@@ -115,8 +115,8 @@ public class RtsServerRestComponent {
 
 	public CompletionStage<List<LessonCellMirror>> getRawSchedule(String facultyId, String groupId) {
 		return request("faculties/" + encodeValue(facultyId) + "/groups/" + encodeValue(groupId),
-				new TypeReference<>() {
-				}
+			new TypeReference<>() {
+			}
 		);
 	}
 
@@ -126,7 +126,7 @@ public class RtsServerRestComponent {
 
 	public CompletionStage<GetWeekSignResponse> getWeekSign(String facultyId, LocalDate localDate) {
 		return request("faculties/" + encodeValue(facultyId) + "/week_sign?day="
-				+ localDate.format(DateTimeFormatter.ISO_DATE), GetWeekSignResponse.class);
+			+ localDate.format(DateTimeFormatter.ISO_DATE), GetWeekSignResponse.class);
 	}
 
 	public CompletionStage<GetTeachersResponse> findTeacher(String teacherName) {

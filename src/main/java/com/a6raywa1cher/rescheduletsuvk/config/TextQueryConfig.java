@@ -18,7 +18,7 @@ public class TextQueryConfig {
 
 	@Bean
 	public TextQueryProcessor processor(AppConfigProperties properties, ResourceLoader resourceLoader,
-	                                    TextQueryExecutor textQueryExecutor) throws Exception {
+										TextQueryExecutor textQueryExecutor) throws Exception {
 		if (properties.isActivateDialogFlow()) {
 			Resource resource = resourceLoader.getResource("classpath:googlecredentials.json");
 			GoogleCredentials credentials = GoogleCredentials.fromStream(resource.getInputStream());

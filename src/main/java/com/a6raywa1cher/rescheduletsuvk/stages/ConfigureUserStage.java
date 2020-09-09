@@ -60,9 +60,9 @@ public class ConfigureUserStage {
 
 	@Autowired
 	public ConfigureUserStage(MessageOutput messageOutput, UserInfoService service,
-	                          AppConfigProperties properties,
-	                          ConfigureUserStageStringsConfigProperties stringProperties, ScheduleService scheduleService,
-	                          FacultyService facultyService, CommonUtils commonUtils) {
+							  AppConfigProperties properties,
+							  ConfigureUserStageStringsConfigProperties stringProperties, ScheduleService scheduleService,
+							  FacultyService facultyService, CommonUtils commonUtils) {
 		this.messageOutput = messageOutput;
 		this.service = service;
 		this.properties = properties;
@@ -79,38 +79,38 @@ public class ConfigureUserStage {
 		UserInfo userInfo = new UserInfo();
 		userInfo.setPeerId(message.getUserId());
 		return facultyService.getFacultiesList()
-				.thenApply(response -> {
-					List<KeyboardButton> buttons = new ArrayList<>();
-					ObjectMapper objectMapper = new ObjectMapper();
-					List<String> facultiesList = new ArrayList<>(response.size());
-					int[] index = new int[1];
-					response.stream()
-							.sorted()
-							.sequential()
-							.forEach(facultyId -> {
-								boolean red = properties.getRedFaculties().contains(facultyId);
-								String str = (index[0] + 1) + ": " + facultyId;
-								facultiesList.add(str);
-								buttons.add(new KeyboardButton(
-										red ? KeyboardButton.Color.NEGATIVE : KeyboardButton.Color.SECONDARY,
-										str,
-										objectMapper.createObjectNode()
-												.put("facultyId", facultyId)
-												.put(ROUTE, "/configure/step2")
-												.toString()));
-								index[0]++;
-							});
-					return MessageResponse.builder()
-							.message(String.format(stringProperties.getChooseFaculty(), String.join("\n", facultiesList)))
-							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
-							.set("userInfo", userInfo)
-							.build();
-				});
+			.thenApply(response -> {
+				List<KeyboardButton> buttons = new ArrayList<>();
+				ObjectMapper objectMapper = new ObjectMapper();
+				List<String> facultiesList = new ArrayList<>(response.size());
+				int[] index = new int[1];
+				response.stream()
+					.sorted()
+					.sequential()
+					.forEach(facultyId -> {
+						boolean red = properties.getRedFaculties().contains(facultyId);
+						String str = (index[0] + 1) + ": " + facultyId;
+						facultiesList.add(str);
+						buttons.add(new KeyboardButton(
+							red ? KeyboardButton.Color.NEGATIVE : KeyboardButton.Color.SECONDARY,
+							str,
+							objectMapper.createObjectNode()
+								.put("facultyId", facultyId)
+								.put(ROUTE, "/configure/step2")
+								.toString()));
+						index[0]++;
+					});
+				return MessageResponse.builder()
+					.message(String.format(stringProperties.getChooseFaculty(), String.join("\n", facultiesList)))
+					.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
+					.set("userInfo", userInfo)
+					.build();
+			});
 	}
 
 	@RTMessageMapping("/step2")
 	public CompletionStage<MessageResponse> step2(ExtendedMessage message, @RTContainerEntity UserInfo userInfo)
-			throws JsonProcessingException {
+		throws JsonProcessingException {
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode jsonNode = objectMapper.readTree(message.getPayload());
 		String facultyId;
@@ -121,24 +121,24 @@ public class ConfigureUserStage {
 			return returnToFirstStepCF();
 		}
 		return facultyService.getGroupsList(facultyId)
-				.thenApply(response -> {
-					if (response.isEmpty()) {
-						return returnToFirstStep();
-					}
-					userInfo.setFacultyId(facultyId);
-					List<KeyboardButton> buttons = response.stream()
-							.map(GetGroupsResponse.GroupInfo::getLevel)
-							.distinct()
-							.sorted()
-							.map(level -> new KeyboardButton(KeyboardButton.Color.SECONDARY, level, objectMapper.createObjectNode()
-									.put(ROUTE, "/configure/step3")
-									.toString()))
-							.collect(Collectors.toList());
-					return MessageResponse.builder()
-							.message(stringProperties.getChooseLevel())
-							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
-							.build();
-				});
+			.thenApply(response -> {
+				if (response.isEmpty()) {
+					return returnToFirstStep();
+				}
+				userInfo.setFacultyId(facultyId);
+				List<KeyboardButton> buttons = response.stream()
+					.map(GetGroupsResponse.GroupInfo::getLevel)
+					.distinct()
+					.sorted()
+					.map(level -> new KeyboardButton(KeyboardButton.Color.SECONDARY, level, objectMapper.createObjectNode()
+						.put(ROUTE, "/configure/step3")
+						.toString()))
+					.collect(Collectors.toList());
+				return MessageResponse.builder()
+					.message(stringProperties.getChooseLevel())
+					.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
+					.build();
+			});
 	}
 
 	private MessageResponse returnToFirstStep() {
@@ -157,66 +157,66 @@ public class ConfigureUserStage {
 			return returnToFirstStepCF();
 		}
 		return facultyService.getGroupsList(userInfo.getFacultyId())
-				.thenApply(response -> {
-					List<KeyboardButton> buttons = response.stream()
-							.filter(gi -> gi.getLevel().equals(level))
-							.map(GetGroupsResponse.GroupInfo::getCourse)
-							.distinct()
-							.sorted()
-							.map(course -> new KeyboardButton(KeyboardButton.Color.SECONDARY,
-									Integer.toString(course), objectMapper.createObjectNode()
-									.put(ROUTE, "/configure/step4")
-									.put("level", level)
-									.toString()))
-							.collect(Collectors.toList());
-					return MessageResponse.builder()
-							.message(stringProperties.getChooseCourse())
-							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
-							.build();
-				});
+			.thenApply(response -> {
+				List<KeyboardButton> buttons = response.stream()
+					.filter(gi -> gi.getLevel().equals(level))
+					.map(GetGroupsResponse.GroupInfo::getCourse)
+					.distinct()
+					.sorted()
+					.map(course -> new KeyboardButton(KeyboardButton.Color.SECONDARY,
+						Integer.toString(course), objectMapper.createObjectNode()
+						.put(ROUTE, "/configure/step4")
+						.put("level", level)
+						.toString()))
+					.collect(Collectors.toList());
+				return MessageResponse.builder()
+					.message(stringProperties.getChooseCourse())
+					.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
+					.build();
+			});
 	}
 
 	@RTMessageMapping("/step4")
 	public CompletionStage<MessageResponse> step4(ExtendedMessage message, @RTContainerEntity UserInfo userInfo)
-			throws JsonProcessingException {
+		throws JsonProcessingException {
 		ObjectMapper objectMapper = new ObjectMapper();
 		String course = message.getBody();
 		JsonNode payload = objectMapper.readTree(message.getPayload());
 		String level = payload.get("level").asText();
 		if (course == null || !course.matches(courseRegex) || level == null ||
-				(!level.equals("Бакалавриат | Специалитет") && !level.equals("Магистратура"))) {
+			(!level.equals("Бакалавриат | Специалитет") && !level.equals("Магистратура"))) {
 			return returnToFirstStepCF();
 		}
 		return facultyService.getGroupsList(userInfo.getFacultyId())
-				.thenApply(response -> {
-					List<String> groupList = new ArrayList<>(response.size());
-					int[] index = new int[1];
-					List<KeyboardButton> buttons = response.stream()
-							.filter(gi -> gi.getLevel().equals(level))
-							.filter(gi -> gi.getCourse().equals(Integer.parseInt(course)))
-							.map(GetGroupsResponse.GroupInfo::getName)
-							.distinct()
-							.sorted()
-							.sequential()
-							.map(groupName -> Pair.of(groupName, ((index[0]++) + 1) + ": " + groupName))
-							.peek(pair -> groupList.add(pair.getSecond()))
-							.map(pair -> new KeyboardButton(KeyboardButton.Color.SECONDARY,
-									pair.getSecond(),
-									objectMapper.createObjectNode()
-											.put(ROUTE, "/configure/step5")
-											.put("groupName", pair.getFirst())
-											.toString()))
-							.collect(Collectors.toList());
-					return MessageResponse.builder()
-							.message(String.format(stringProperties.getChooseGroup(), String.join("\n", groupList)))
-							.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
-							.build();
-				});
+			.thenApply(response -> {
+				List<String> groupList = new ArrayList<>(response.size());
+				int[] index = new int[1];
+				List<KeyboardButton> buttons = response.stream()
+					.filter(gi -> gi.getLevel().equals(level))
+					.filter(gi -> gi.getCourse().equals(Integer.parseInt(course)))
+					.map(GetGroupsResponse.GroupInfo::getName)
+					.distinct()
+					.sorted()
+					.sequential()
+					.map(groupName -> Pair.of(groupName, ((index[0]++) + 1) + ": " + groupName))
+					.peek(pair -> groupList.add(pair.getSecond()))
+					.map(pair -> new KeyboardButton(KeyboardButton.Color.SECONDARY,
+						pair.getSecond(),
+						objectMapper.createObjectNode()
+							.put(ROUTE, "/configure/step5")
+							.put("groupName", pair.getFirst())
+							.toString()))
+					.collect(Collectors.toList());
+				return MessageResponse.builder()
+					.message(String.format(stringProperties.getChooseGroup(), String.join("\n", groupList)))
+					.keyboard(messageOutput.createKeyboard(true, buttons.toArray(new KeyboardButton[]{})))
+					.build();
+			});
 	}
 
 	@RTMessageMapping("/step5")
 	public CompletionStage<MessageResponse> step5(ExtendedMessage message, @RTContainerEntity UserInfo userInfo)
-			throws JsonProcessingException {
+		throws JsonProcessingException {
 		ObjectMapper objectMapper = new ObjectMapper();
 		JsonNode payload = objectMapper.readTree(message.getPayload());
 		String groupId = payload.get("groupName").asText();
@@ -225,47 +225,47 @@ public class ConfigureUserStage {
 			return returnToFirstStepCF();
 		}
 		return facultyService.getGroupsList(facultyId)
-				.thenCompose(response -> {
-					Optional<GetGroupsResponse.GroupInfo> optionalGroupInfo = response.stream()
-							.filter(gi -> gi.getName().equals(groupId)).findAny();
-					if (optionalGroupInfo.isEmpty()) {
-						return returnToFirstStepCF();
-					}
-					userInfo.setGroupId(groupId);
-					if (optionalGroupInfo.get().getSubgroups() > 0) {
-						return scheduleService.findDifferenceBetweenSubgroups(facultyId, optionalGroupInfo.get().getName())
-								.thenApply(diff -> {
-									LessonCellMirror mirror1 = diff.getFirst();
-									LessonCellMirror mirror2 = diff.getSecond();
-									String outMessage = (mirror2 != null ? stringProperties.getChooseSubgroup() :
-											stringProperties.getChooseSubgroupWindow()) + "\n" +
-											(mirror1.getWeekSign() != WeekSign.ANY ? String.format("%s (%s)\n",
-													mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
-															Locale.forLanguageTag("ru-RU")).toUpperCase(), mirror1.getWeekSign()) :
-													mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
-															Locale.forLanguageTag("ru-RU")).toUpperCase() + "\n"
-											) +
-											commonUtils.convertLessonCell(mirror1, false, true, true, false, false);
-									String keyboard = messageOutput.createKeyboard(true,
-											new KeyboardButton(KeyboardButton.Color.POSITIVE, stringProperties.getYes(),
-													objectMapper.createObjectNode()
-															.put(ROUTE, "/configure/step6")
-															.put("subgroup", diff.getFirstSubgroup())
-															.toString()),
-											new KeyboardButton(KeyboardButton.Color.NEGATIVE, stringProperties.getNo(),
-													objectMapper.createObjectNode()
-															.put(ROUTE, "/configure/step6")
-															.put("subgroup", diff.getSecondSubgroup())
-															.toString()));
-									return MessageResponse.builder()
-											.message(outMessage)
-											.keyboard(keyboard)
-											.build();
-								});
-					} else {
-						return registerUser(message, userInfo);
-					}
-				});
+			.thenCompose(response -> {
+				Optional<GetGroupsResponse.GroupInfo> optionalGroupInfo = response.stream()
+					.filter(gi -> gi.getName().equals(groupId)).findAny();
+				if (optionalGroupInfo.isEmpty()) {
+					return returnToFirstStepCF();
+				}
+				userInfo.setGroupId(groupId);
+				if (optionalGroupInfo.get().getSubgroups() > 0) {
+					return scheduleService.findDifferenceBetweenSubgroups(facultyId, optionalGroupInfo.get().getName())
+						.thenApply(diff -> {
+							LessonCellMirror mirror1 = diff.getFirst();
+							LessonCellMirror mirror2 = diff.getSecond();
+							String outMessage = (mirror2 != null ? stringProperties.getChooseSubgroup() :
+								stringProperties.getChooseSubgroupWindow()) + "\n" +
+								(mirror1.getWeekSign() != WeekSign.ANY ? String.format("%s (%s)\n",
+									mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
+										Locale.forLanguageTag("ru-RU")).toUpperCase(), mirror1.getWeekSign()) :
+									mirror1.getDayOfWeek().getDisplayName(TextStyle.FULL,
+										Locale.forLanguageTag("ru-RU")).toUpperCase() + "\n"
+								) +
+								commonUtils.convertLessonCell(mirror1, false, true, true, false, false);
+							String keyboard = messageOutput.createKeyboard(true,
+								new KeyboardButton(KeyboardButton.Color.POSITIVE, stringProperties.getYes(),
+									objectMapper.createObjectNode()
+										.put(ROUTE, "/configure/step6")
+										.put("subgroup", diff.getFirstSubgroup())
+										.toString()),
+								new KeyboardButton(KeyboardButton.Color.NEGATIVE, stringProperties.getNo(),
+									objectMapper.createObjectNode()
+										.put(ROUTE, "/configure/step6")
+										.put("subgroup", diff.getSecondSubgroup())
+										.toString()));
+							return MessageResponse.builder()
+								.message(outMessage)
+								.keyboard(keyboard)
+								.build();
+						});
+				} else {
+					return registerUser(message, userInfo);
+				}
+			});
 	}
 
 	@RTMessageMapping("/step6")
@@ -275,21 +275,21 @@ public class ConfigureUserStage {
 		int subgroup = jsonNode.get("subgroup").asInt();
 		userInfo.setSubgroup(subgroup);
 		return registerUser(message, userInfo)
-				.thenApplyAsync(mr ->
-						MessageResponse.builder()
-								.message(String.format(stringProperties.getSubgroupNotify(), subgroup))
-								.build()
-								.resolve(mr)
-				);
+			.thenApplyAsync(mr ->
+				MessageResponse.builder()
+					.message(String.format(stringProperties.getSubgroupNotify(), subgroup))
+					.build()
+					.resolve(mr)
+			);
 	}
 
 	private CompletionStage<MessageResponse> registerUser(ExtendedMessage message, UserInfo userInfo) {
 		service.save(userInfo);
 		log.info("Registered user {} with faculty {}, group {} and subgroup {}", message.getUserId(), userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup());
 		return CompletableFuture.completedFuture(MessageResponse.builder()
-				.message(stringProperties.getSuccess())
-				.set("userInfo", null)
-				.redirectTo("/home")
-				.build());
+			.message(stringProperties.getSuccess())
+			.set("userInfo", null)
+			.redirectTo("/home")
+			.build());
 	}
 }

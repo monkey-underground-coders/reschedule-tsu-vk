@@ -29,9 +29,9 @@ public class DialogFlowTextQueryProcessor implements TextQueryProcessor {
 	}
 
 	private QueryResult detectIntentTexts(
-			String text,
-			String sessionId,
-			String languageCode) throws Exception {
+		String text,
+		String sessionId,
+		String languageCode) throws Exception {
 		// Instantiates a client
 		try (SessionsClient sessionsClient = SessionsClient.create(sessionsSettings)) {
 			// Set the session name using the sessionId (UUID) and projectID (my-project-id)
@@ -52,7 +52,7 @@ public class DialogFlowTextQueryProcessor implements TextQueryProcessor {
 
 			log.debug("Query Text: '{}'", queryResult.getQueryText());
 			log.debug("Detected Intent: {} (confidence: {})",
-					queryResult.getIntent().getDisplayName(), queryResult.getIntentDetectionConfidence());
+				queryResult.getIntent().getDisplayName(), queryResult.getIntentDetectionConfidence());
 			log.debug("Fulfillment Text: '{}'", queryResult.getFulfillmentText());
 
 			return queryResult;
@@ -62,9 +62,9 @@ public class DialogFlowTextQueryProcessor implements TextQueryProcessor {
 	private CompletionStage<MessageResponse> getPairs(UserInfo userInfo, ExtendedMessage extendedMessage, QueryResult queryResult) {
 		Map<String, Value> map = queryResult.getParameters().getFieldsMap();
 		String group = map.containsKey("group_name") && map.get("group_name").getNumberValue() != 0d ? Integer.toString((int) map.get("group_name").getNumberValue())
-				: userInfo.getGroupId();
+			: userInfo.getGroupId();
 		LocalDateTime localDateTime = map.containsKey("date") ? LocalDateTime.from(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(
-				map.get("date").getStringValue())) : LocalDateTime.now();
+			map.get("date").getStringValue())) : LocalDateTime.now();
 		log.debug("group: {}, ldt:{}", group, localDateTime.toString());
 		return textQueryExecutor.getPair(userInfo, extendedMessage, group, localDateTime.toLocalDate());
 	}
@@ -73,9 +73,9 @@ public class DialogFlowTextQueryProcessor implements TextQueryProcessor {
 	public CompletionStage<MessageResponse> process(UserInfo userInfo, ExtendedMessage extendedMessage) {
 		try {
 			if (extendedMessage.getBody() == null || extendedMessage.getBody().isBlank() ||
-					extendedMessage.getBody().length() > 250) return CompletableFuture.completedFuture(null);
+				extendedMessage.getBody().length() > 250) return CompletableFuture.completedFuture(null);
 			QueryResult queryResult = detectIntentTexts(extendedMessage.getBody(),
-					Integer.toString(extendedMessage.getUserId()), "ru-RU");
+				Integer.toString(extendedMessage.getUserId()), "ru-RU");
 			switch (queryResult.getIntent().getDisplayName()) {
 				case GET_PAIRS:
 					return getPairs(userInfo, extendedMessage, queryResult);

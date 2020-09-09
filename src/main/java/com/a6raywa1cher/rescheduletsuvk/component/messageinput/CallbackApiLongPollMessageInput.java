@@ -34,14 +34,14 @@ public class CallbackApiLongPollMessageInput extends CallbackApiLongPoll impleme
 		this.group = actor;
 		this.properties = properties;
 		this.objectMapper = new ObjectMapper()
-				.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+			.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 	}
 
 	@PostConstruct
 	public void onStart() throws ClientException, ApiException {
 		vk.groups().setLongPollSettings(group, properties.getGroupId()).enabled(true)
-				.messageNew(true)
-				.execute();
+			.messageNew(true)
+			.execute();
 	}
 
 	@Override

@@ -37,9 +37,9 @@ public class StageBeanPostProcessor implements BeanPostProcessor {
 
 	private void checkMethod(Method method) {
 		if (!MessageResponse.class.isAssignableFrom(method.getReturnType()) &&
-				!CompletionStage.class.isAssignableFrom(method.getReturnType())) {
+			!CompletionStage.class.isAssignableFrom(method.getReturnType())) {
 			throw new RuntimeException(String.format("Invalid return type of %s, class %s",
-					method.getName(), method.getDeclaringClass().getName()));
+				method.getName(), method.getDeclaringClass().getName()));
 		}
 	}
 
@@ -81,7 +81,7 @@ public class StageBeanPostProcessor implements BeanPostProcessor {
 					String path = resolve(givenPrefix, messageMapping.value());
 					Method proxyMethod = bean.getClass().getMethod(method.getName(), method.getParameterTypes());
 					MappingMethodInfo mappingMethodInfo = new MappingMethodInfo(proxyMethod,
-							method, bean, path, textQueryPath, exceptionRedirect);
+						method, bean, path, textQueryPath, exceptionRedirect);
 					messageRouter.addMapping(mappingMethodInfo);
 				}
 			}

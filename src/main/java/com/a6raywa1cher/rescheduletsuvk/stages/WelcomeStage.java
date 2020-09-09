@@ -24,7 +24,7 @@ public class WelcomeStage {
 
 	@Autowired
 	public WelcomeStage(UserInfoService userInfoService, WelcomeStageStringsConfigProperties properties,
-	                    ScheduleService scheduleService) {
+						ScheduleService scheduleService) {
 		this.userInfoService = userInfoService;
 		this.properties = properties;
 		this.scheduleService = scheduleService;
@@ -37,19 +37,19 @@ public class WelcomeStage {
 		if (optional.isPresent()) {
 			UserInfo userInfo = optional.get();
 			return scheduleService.getRawSchedule(userInfo.getFacultyId(), userInfo.getGroupId())
-					.thenApply(o -> MessageResponse.builder()
-							.redirectTo("/home/")
-							.build())
-					.exceptionally(e -> MessageResponse.builder()
-							.message(properties.getWelcome())
-							.redirectTo("/configure/step1")
-							.build());
+				.thenApply(o -> MessageResponse.builder()
+					.redirectTo("/home/")
+					.build())
+				.exceptionally(e -> MessageResponse.builder()
+					.message(properties.getWelcome())
+					.redirectTo("/configure/step1")
+					.build());
 		} else {
 			return CompletableFuture.completedStage(
-					MessageResponse.builder()
-							.message(properties.getWelcome())
-							.redirectTo("/configure/step1")
-							.build()
+				MessageResponse.builder()
+					.message(properties.getWelcome())
+					.redirectTo("/configure/step1")
+					.build()
 			);
 		}
 	}

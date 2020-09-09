@@ -31,8 +31,8 @@ public class MainMenuStage {
 
 	@Autowired
 	public MainMenuStage(UserInfoService service, ScheduleService scheduleService,
-	                     TextQueryProcessor textQueryProcessor, MainMenuStageStringsConfigProperties properties,
-	                     DefaultKeyboardsComponent defaultKeyboardsComponent) {
+						 TextQueryProcessor textQueryProcessor, MainMenuStageStringsConfigProperties properties,
+						 DefaultKeyboardsComponent defaultKeyboardsComponent) {
 		this.service = service;
 		this.scheduleService = scheduleService;
 		this.textQueryProcessor = textQueryProcessor;
@@ -43,35 +43,35 @@ public class MainMenuStage {
 	@RTMessageMapping("/seven_days")
 	public CompletionStage<MessageResponse> getSevenDays(UserInfo userInfo) {
 		return scheduleService.getScheduleForSevenDays(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(),
-				LocalDate.now())
-				.thenApply(schedule -> MessageResponse.builder()
-						.message(schedule)
-						.keyboard(defaultKeyboardsComponent.mainMenuStage())
-						.build());
+			LocalDate.now())
+			.thenApply(schedule -> MessageResponse.builder()
+				.message(schedule)
+				.keyboard(defaultKeyboardsComponent.mainMenuStage())
+				.build());
 	}
 
 	@RTMessageMapping("/today")
 	public CompletionStage<MessageResponse> getTodayLessons(UserInfo userInfo) {
 		return scheduleService.getScheduleFor(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), LocalDate.now(), true)
-				.thenApply(optional -> {
-					String outMessage = optional.orElse(properties.getNoLessonsToday());
-					return MessageResponse.builder()
-							.message(outMessage)
-							.keyboard(defaultKeyboardsComponent.mainMenuStage())
-							.build();
-				});
+			.thenApply(optional -> {
+				String outMessage = optional.orElse(properties.getNoLessonsToday());
+				return MessageResponse.builder()
+					.message(outMessage)
+					.keyboard(defaultKeyboardsComponent.mainMenuStage())
+					.build();
+			});
 	}
 
 	@RTMessageMapping("/next")
 	public CompletionStage<MessageResponse> getNextLesson(UserInfo userInfo) {
 		return scheduleService.getNextLesson(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), LocalDateTime.now())
-				.thenApply(optional -> {
-					String outMessage = optional.orElse(properties.getNoNextLessonsToday());
-					return MessageResponse.builder()
-							.message(outMessage)
-							.keyboard(defaultKeyboardsComponent.mainMenuStage())
-							.build();
-				});
+			.thenApply(optional -> {
+				String outMessage = optional.orElse(properties.getNoNextLessonsToday());
+				return MessageResponse.builder()
+					.message(outMessage)
+					.keyboard(defaultKeyboardsComponent.mainMenuStage())
+					.build();
+			});
 	}
 
 	@RTMessageMapping("/tomorrow")
@@ -92,68 +92,68 @@ public class MainMenuStage {
 		LocalDate finalLocalDate = localDate;
 		boolean finalIsDayAfterTomorrow = isDayAfterTomorrow;
 		return scheduleService.getScheduleFor(userInfo.getFacultyId(), userInfo.getGroupId(), userInfo.getSubgroup(), finalLocalDate, false)
-				.thenApply(optional -> {
-					String outMessage = optional.orElse(finalIsDayAfterTomorrow ? properties.getNoLessonsAtMonday() :
-							properties.getNoTomorrowPairs());
-					return MessageResponse.builder()
-							.message(outMessage)
-							.keyboard(defaultKeyboardsComponent.mainMenuStage())
-							.build();
-				});
+			.thenApply(optional -> {
+				String outMessage = optional.orElse(finalIsDayAfterTomorrow ? properties.getNoLessonsAtMonday() :
+					properties.getNoTomorrowPairs());
+				return MessageResponse.builder()
+					.message(outMessage)
+					.keyboard(defaultKeyboardsComponent.mainMenuStage())
+					.build();
+			});
 	}
 
 	@RTMessageMapping("/tq")
 	public CompletionStage<MessageResponse> textQuery(UserInfo userInfo, ExtendedMessage extendedMessage) {
 		return textQueryProcessor.process(userInfo, extendedMessage)
-				.thenApplyAsync(mr -> {
-					if (mr == null) {
-						return MessageResponse.builder()
-								.redirectTo("/home/info")
-								.build();
-					}
-					return mr;
-				});
+			.thenApplyAsync(mr -> {
+				if (mr == null) {
+					return MessageResponse.builder()
+						.redirectTo("/home/info")
+						.build();
+				}
+				return mr;
+			});
 	}
 
 	@RTMessageMapping("/raw")
 	public MessageResponse getRawSchedule() {
 		return MessageResponse.builder()
-				.redirectTo("/raw/step1")
-				.build();
+			.redirectTo("/raw/step1")
+			.build();
 	}
 
 	@RTMessageMapping("/drop")
 	public MessageResponse dropSettings(UserInfo userInfo) {
 		service.delete(userInfo);
 		return MessageResponse.builder()
-				.redirectTo("/")
-				.build();
+			.redirectTo("/")
+			.build();
 	}
 
 	@RTMessageMapping("/")
 	public MessageResponse greeting(UserInfo userInfo, @RTContainerEntity(nullable = true) Boolean silent) {
 		if (silent != null && silent) {
 			return MessageResponse.builder()
-					.keyboard(defaultKeyboardsComponent.mainMenuStage())
-					.set("silent", null)
-					.build();
+				.keyboard(defaultKeyboardsComponent.mainMenuStage())
+				.set("silent", null)
+				.build();
 		} else {
 			String outMessage = userInfo.getSubgroup() != null ?
-					String.format(properties.getGreetingWithSubgroup(),
-							userInfo.getGroupId(), userInfo.getSubgroup()) :
-					String.format(properties.getGreeting(), userInfo.getGroupId());
+				String.format(properties.getGreetingWithSubgroup(),
+					userInfo.getGroupId(), userInfo.getSubgroup()) :
+				String.format(properties.getGreeting(), userInfo.getGroupId());
 			return MessageResponse.builder()
-					.message(outMessage)
-					.keyboard(defaultKeyboardsComponent.mainMenuStage())
-					.set("silent", null)
-					.build();
+				.message(outMessage)
+				.keyboard(defaultKeyboardsComponent.mainMenuStage())
+				.set("silent", null)
+				.build();
 		}
 	}
 
 	@RTMessageMapping("/teacher")
 	public MessageResponse getTeacherLessons() {
 		return MessageResponse.builder()
-				.redirectTo("/home/teacher/step1")
-				.build();
+			.redirectTo("/home/teacher/step1")
+			.build();
 	}
 }

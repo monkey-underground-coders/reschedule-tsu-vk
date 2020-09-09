@@ -26,35 +26,35 @@ public class FacultyServiceImpl implements FacultyService {
 	@Override
 	public CompletionStage<List<String>> getFacultiesList() {
 		return restComponent.getFaculties().thenApply(GetFacultiesResponse::getFaculties)
-				.exceptionally(e -> {
-					log.error("Get faculties error", e);
-					Sentry.capture(e);
-					return new ArrayList<>();
-				});
+			.exceptionally(e -> {
+				log.error("Get faculties error", e);
+				Sentry.capture(e);
+				return new ArrayList<>();
+			});
 	}
 
 	@Override
 	public CompletionStage<List<GetGroupsResponse.GroupInfo>> getGroupsList(String faculty) {
 		return restComponent.getGroups(faculty).thenApply(GetGroupsResponse::getGroups)
-				.exceptionally(e -> {
-					log.error("Get groups error", e);
-					Sentry.capture(e);
-					if (e.getCause() != null && e.getCause() instanceof NotFoundException) {
-						throw (NotFoundException) e.getCause();
-					}
-					return new ArrayList<>();
-				});
+			.exceptionally(e -> {
+				log.error("Get groups error", e);
+				Sentry.capture(e);
+				if (e.getCause() != null && e.getCause() instanceof NotFoundException) {
+					throw (NotFoundException) e.getCause();
+				}
+				return new ArrayList<>();
+			});
 	}
 
 	@Override
 	public CompletionStage<GetGroupsResponse.GroupInfo> getGroupsStartsWith(String faculty, String group) {
 		return this.getGroupsList(faculty)
-				.thenApply(response -> response.stream()
-						.filter(gi -> gi.getName().contains(group)).findFirst().orElse(null))
-				.exceptionally(e -> {
-					log.error("Find group error", e);
-					Sentry.capture(e);
-					return null;
-				});
+			.thenApply(response -> response.stream()
+				.filter(gi -> gi.getName().contains(group)).findFirst().orElse(null))
+			.exceptionally(e -> {
+				log.error("Find group error", e);
+				Sentry.capture(e);
+				return null;
+			});
 	}
 }

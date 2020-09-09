@@ -26,7 +26,7 @@ public class VkOnlineStatusComponent {
 		this.group = group;
 	}
 
-	@Scheduled(initialDelay = 0, fixedDelay = 5000000)
+	@Scheduled(initialDelay = 0, fixedDelay = 5000 * 60)
 	public void setOnline() {
 		try {
 			new OnlineEnablerQueryBuilder(vk, group).execute();

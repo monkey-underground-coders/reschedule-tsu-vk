@@ -6,6 +6,8 @@ import lombok.Data;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -43,4 +45,6 @@ public class LessonCellMirror {
 	private String faculty;
 
 	private Boolean userMade;
+
+	private List<String> attributes = new ArrayList<>();
 }

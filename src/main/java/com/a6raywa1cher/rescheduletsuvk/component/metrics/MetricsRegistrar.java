@@ -32,7 +32,7 @@ public class MetricsRegistrar {
 	private RtsServerRestComponent rtsServerRestComponent;
 
 	public MetricsRegistrar(MeterRegistry meterRegistry, UserInfoRepository userInfoRepository,
-	                        RtsServerRestComponent rtsServerRestComponent) {
+							RtsServerRestComponent rtsServerRestComponent) {
 		this.meterRegistry = meterRegistry;
 		this.userInfoRepository = userInfoRepository;
 		this.rtsServerRestComponent = rtsServerRestComponent;
@@ -44,7 +44,7 @@ public class MetricsRegistrar {
 		if (meterRegistry != null) {
 			this.timer = meterRegistry.timer("rt.time.per.message");
 			Gauge.builder("rt.users.today", () -> users.size())
-					.register(meterRegistry);
+				.register(meterRegistry);
 			updateUsersStats();
 		}
 	}
@@ -68,8 +68,8 @@ public class MetricsRegistrar {
 	public void updateUsersStats() {
 		Set<FacultyGroupCount> list = new HashSet<>(userInfoRepository.getCoursesCount());
 		Set<String> faculties = list.stream()
-				.map(FacultyGroupCount::getFacultyId)
-				.collect(Collectors.toUnmodifiableSet());
+			.map(FacultyGroupCount::getFacultyId)
+			.collect(Collectors.toUnmodifiableSet());
 
 		Map<String, Map<String, Long>> facultyToGroups = new HashMap<>();
 		faculties.forEach(faculty -> facultyToGroups.put(faculty, new HashMap<>()));
@@ -79,34 +79,34 @@ public class MetricsRegistrar {
 		for (String faculty : faculties) {
 			CompletionStage<GetGroupsResponse> completionStage = rtsServerRestComponent.getGroups(faculty);
 			CompletionStage<Set<CourseInfo>> convertToCourseInfoSet = completionStage
-					.thenApply(response -> {
-						Map<String, Long> appliedGroups = facultyToGroups.get(faculty);
-						return response.getGroups().stream()
-								.filter(gi -> appliedGroups.containsKey(gi.getName()))
-								.map(gi -> new CourseInfo(faculty, gi.getLevel(), gi.getCourse(), appliedGroups.get(gi.getName())))
-								.collect(Collectors.toSet());
-					})
-					.exceptionally(e -> {
-						log.error("Error during updateUsersStats", e);
-						return null;
-					});
+				.thenApply(response -> {
+					Map<String, Long> appliedGroups = facultyToGroups.get(faculty);
+					return response.getGroups().stream()
+						.filter(gi -> appliedGroups.containsKey(gi.getName()))
+						.map(gi -> new CourseInfo(faculty, gi.getLevel(), gi.getCourse(), appliedGroups.get(gi.getName())))
+						.collect(Collectors.toSet());
+				})
+				.exceptionally(e -> {
+					log.error("Error during updateUsersStats", e);
+					return null;
+				});
 			completableFutures.add(convertToCourseInfoSet.toCompletableFuture());
 		}
 		CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[]{}))
-				.thenAccept(v -> {
-					completableFutures.stream()
-							.map(cf -> cf.getNow(null))
-							.filter(Objects::nonNull)
-							.flatMap(Collection::stream)
-							.forEach(info -> meterRegistry.gauge("rt.users.info",
-									List.of(
-											Tag.of("faculty", info.getFaculty()),
-											Tag.of("course", Integer.toString(info.getCourse())),
-											Tag.of("program", info.getProgram())
-									),
-									info.getCount()
-							));
-				});
+			.thenAccept(v -> {
+				completableFutures.stream()
+					.map(cf -> cf.getNow(null))
+					.filter(Objects::nonNull)
+					.flatMap(Collection::stream)
+					.forEach(info -> meterRegistry.gauge("rt.users.info",
+						List.of(
+							Tag.of("faculty", info.getFaculty()),
+							Tag.of("course", Integer.toString(info.getCourse())),
+							Tag.of("program", info.getProgram())
+						),
+						info.getCount()
+					));
+			});
 	}
 
 	public void registerTimeConsumed(long millisecond) {

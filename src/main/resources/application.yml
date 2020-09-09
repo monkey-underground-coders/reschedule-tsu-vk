@@ -6,7 +6,7 @@ app:
     secret-confirm: ---
     secret-key: ---
   rts-url: ---
-  activate-dialogflow: false
+  activate-dialogflow: false  # googlecredentials.json must be in classpath for 'true'
   red-faculties: []
 management:
   endpoints:
@@ -16,9 +16,9 @@ management:
 # ===============================
 # DB CONNECTION
 # ===============================
-spring.datasource.url: jdbc:postgresql://localhost:5433/reschedule-tsu-vk
-spring.datasource.username: postgres
-spring.datasource.password: postgres
+spring.datasource.url: ---
+spring.datasource.username: ---
+spring.datasource.password: ---
 # ===============================
 # JPA / HIBERNATE
 # ===============================

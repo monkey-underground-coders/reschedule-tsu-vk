@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class InfoFilterStage implements FilterStage {
-	private MessageOutput messageOutput;
 	private final BuildProperties buildProperties;
+	private MessageOutput messageOutput;
 
 	@Autowired
 	public InfoFilterStage(MessageOutput messageOutput, BuildProperties buildProperties) {
@@ -21,8 +21,8 @@ public class InfoFilterStage implements FilterStage {
 	public ExtendedMessage process(ExtendedMessage extendedMessage) {
 		if (extendedMessage.getBody().equals("!Версия")) {
 			messageOutput.sendMessage(extendedMessage.getUserId(),
-					"Версия: " + buildProperties.getVersion() + ", время сборки: " +
-							buildProperties.getTime().toString(), ""
+				"Версия: " + buildProperties.getVersion() + ", время сборки: " +
+					buildProperties.getTime().toString(), ""
 			);
 		}
 		return extendedMessage;

@@ -31,7 +31,7 @@ public class CallbackApiMessageInput implements MessageInput {
 		this.component = component;
 		this.properties = properties;
 		this.objectMapper = new ObjectMapper()
-				.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+			.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 	}
 
 	@PostMapping("/callback")

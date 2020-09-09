@@ -38,19 +38,19 @@ public class VkMessageOutput implements MessageOutput {
 		try {
 			if (!keyboard.equals("")) {
 				vk.messages().send(group)
-						.message(message)
-						.peerId((Integer) peerId)
-						.unsafeParam("dont_parse_links", 1)
-						.unsafeParam("keyboard", keyboard)
-						.randomId(ThreadLocalRandom.current().nextInt())
-						.execute();
+					.message(message)
+					.peerId((Integer) peerId)
+					.unsafeParam("dont_parse_links", 1)
+					.unsafeParam("keyboard", keyboard)
+					.randomId(ThreadLocalRandom.current().nextInt())
+					.execute();
 			} else {
 				vk.messages().send(group)
-						.message(message)
-						.peerId((Integer) peerId)
-						.unsafeParam("dont_parse_links", 1)
-						.randomId(ThreadLocalRandom.current().nextInt())
-						.execute();
+					.message(message)
+					.peerId((Integer) peerId)
+					.unsafeParam("dont_parse_links", 1)
+					.randomId(ThreadLocalRandom.current().nextInt())
+					.execute();
 			}
 		} catch (ApiException | ClientException e) {
 			throw new RuntimeException("Message execution failed", e);
@@ -106,8 +106,8 @@ public class VkMessageOutput implements MessageOutput {
 			ObjectNode button = objectMapper.createObjectNode();
 			button.put("color", keyboardButton.getColor().name().toLowerCase());
 			ObjectNode action = objectMapper.createObjectNode()
-					.put("type", "text")
-					.put("label", truncate(keyboardButton.getLabel()));
+				.put("type", "text")
+				.put("label", truncate(keyboardButton.getLabel()));
 			if (keyboardButton.getPayload() != null) {
 				action.put("payload", keyboardButton.getPayload());
 			}
@@ -122,8 +122,8 @@ public class VkMessageOutput implements MessageOutput {
 			}
 		}
 		return objectMapper.createObjectNode()
-				.put("one_time", oneTime)
-				.set("buttons", allButtons)
-				.toString();
+			.put("one_time", oneTime)
+			.set("buttons", allButtons)
+			.toString();
 	}
 }

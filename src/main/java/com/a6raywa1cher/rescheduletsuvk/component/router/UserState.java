@@ -17,13 +17,13 @@ public class UserState {
 	@Override
 	public String toString() {
 		return "UserState{" +
-				"userId=" + userId +
-				", textQueryConsumerPath='" + textQueryConsumerPath + '\'' +
-				", container=[" + (
-				container.entrySet().stream()
-						.map(e -> e.getKey() + "->" + e.getValue().toString())
-						.collect(Collectors.joining())
+			"userId=" + userId +
+			", textQueryConsumerPath='" + textQueryConsumerPath + '\'' +
+			", container=[" + (
+			container.entrySet().stream()
+				.map(e -> e.getKey() + "->" + e.getValue().toString())
+				.collect(Collectors.joining())
 		) + ']' +
-				'}';
+			'}';
 	}
 }

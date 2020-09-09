@@ -28,8 +28,8 @@ public class DefaultTextQueryExecutor implements TextQueryExecutor {
 
 	@Autowired
 	public DefaultTextQueryExecutor(ScheduleService scheduleService,
-	                                StringsConfigProperties properties, FacultyService facultyService,
-	                                DefaultKeyboardsComponent defaultKeyboardsComponent) {
+									StringsConfigProperties properties, FacultyService facultyService,
+									DefaultKeyboardsComponent defaultKeyboardsComponent) {
 		this.scheduleService = scheduleService;
 		this.properties = properties;
 		this.facultyService = facultyService;
@@ -40,28 +40,28 @@ public class DefaultTextQueryExecutor implements TextQueryExecutor {
 	public CompletionStage<MessageResponse> getPair(UserInfo userInfo, ExtendedMessage extendedMessage, String groupId, LocalDate date) {
 		CompletionStage<GetGroupsResponse.GroupInfo> findGroup = facultyService.getGroupsStartsWith(userInfo.getFacultyId(), groupId);
 		return findGroup.thenCompose(gi -> scheduleService.getScheduleFor(
-				userInfo.getFacultyId(), gi.getName(), null, date, LocalDate.now().isEqual(date)))
-				.thenApply(response -> {
-					if (response.isEmpty()) {
-						return MessageResponse.builder()
-								.message(properties.getLessonsNotFound())
-								.keyboard(defaultKeyboardsComponent.mainMenuStage())
-								.build();
-					} else {
-						String prepared = properties.getGroupsEmoji() + ' ' +
-								findGroup.toCompletableFuture().getNow(null).getName() + ' ' +
-								response.get();
-						return MessageResponse.builder()
-								.message(prepared)
-								.keyboard(defaultKeyboardsComponent.mainMenuStage())
-								.build();
-					}
-				})
-				.exceptionally(e -> {
-					log.error("Find group error", e);
-					Sentry.capture(e);
-					return null;
-				});
+			userInfo.getFacultyId(), gi.getName(), null, date, LocalDate.now().isEqual(date)))
+			.thenApply(response -> {
+				if (response.isEmpty()) {
+					return MessageResponse.builder()
+						.message(properties.getLessonsNotFound())
+						.keyboard(defaultKeyboardsComponent.mainMenuStage())
+						.build();
+				} else {
+					String prepared = properties.getGroupsEmoji() + ' ' +
+						findGroup.toCompletableFuture().getNow(null).getName() + ' ' +
+						response.get();
+					return MessageResponse.builder()
+						.message(prepared)
+						.keyboard(defaultKeyboardsComponent.mainMenuStage())
+						.build();
+				}
+			})
+			.exceptionally(e -> {
+				log.error("Find group error", e);
+				Sentry.capture(e);
+				return null;
+			});
 
 	}
 }

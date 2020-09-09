@@ -11,6 +11,6 @@ import java.util.List;
 @Repository
 public interface UserInfoRepository extends CrudRepository<UserInfo, Integer> {
 	@Query("select new com.a6raywa1cher.rescheduletsuvk.dao.submodel.FacultyGroupCount(u.facultyId, u.groupId, count(u)) " +
-			"from UserInfo u group by u.facultyId, u.groupId")
+		"from UserInfo u group by u.facultyId, u.groupId")
 	List<FacultyGroupCount> getCoursesCount();
 }

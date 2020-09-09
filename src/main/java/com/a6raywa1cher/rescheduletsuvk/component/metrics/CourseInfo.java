@@ -4,11 +4,11 @@ import lombok.Data;
 
 @Data
 public class CourseInfo {
-    private final String faculty;
+	private final String faculty;
 
-    private final String program;
+	private final String program;
 
-    private final int course;
+	private final int course;
 
-    private final long count;
+	private final long count;
 }
