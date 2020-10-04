@@ -141,6 +141,7 @@ public class FindTeacherStage {
 					return MessageResponse.builder()
 						.message(properties.getNoLessonsFound())
 						.set("silent", true)
+						.set("teacher", null)
 						.redirectTo("/home")
 						.build();
 				}
@@ -157,6 +158,7 @@ public class FindTeacherStage {
 				return MessageResponse.builder()
 					.message(sb.toString())
 					.set("silent", true)
+					.set("teacher", null)
 					.redirectTo("/home")
 					.build();
 			});
