@@ -20,7 +20,7 @@ COPY ./pom.xml ./pom.xml
 
 RUN ./mvnw package -DskipTests -Dmaven.gitcommitid.skip=true
 
-FROM tomcat:jre11-temurin
+FROM eclipse-temurin:11
 WORKDIR /app
 
 # Copy builded application to the stage
