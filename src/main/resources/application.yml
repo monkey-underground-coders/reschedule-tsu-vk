@@ -6,8 +6,10 @@ app:
     secret-confirm: ---
     secret-key: ---
   rts-url: ---
-  activate-dialogflow: false  # googlecredentials.json must be in classpath for 'true'
-  red-faculties: []
+  text-query:
+    activate-dialogflow: false  # googlecredentials.json must be in classpath for 'true'
+    credentials-path: classpath:googlecredentials.json
+  red-faculties: [ ]
 management:
   endpoints:
     web:

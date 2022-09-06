@@ -17,7 +17,5 @@ public class AppConfigProperties {
 	@URL
 	private String rtsUrl;
 
-	private boolean activateDialogFlow = false;
-
 	private Set<String> redFaculties = new HashSet<>();
 }

@@ -1,4 +1,4 @@
-package com.a6raywa1cher.rescheduletsuvk.config;
+package com.a6raywa1cher.rescheduletsuvk.config.queryconfig;
 
 import com.a6raywa1cher.rescheduletsuvk.component.textquery.DialogFlowTextQueryProcessor;
 import com.a6raywa1cher.rescheduletsuvk.component.textquery.EmptyTextQueryProcessor;
@@ -17,10 +17,13 @@ import org.springframework.core.io.ResourceLoader;
 public class TextQueryConfig {
 
 	@Bean
-	public TextQueryProcessor processor(AppConfigProperties properties, ResourceLoader resourceLoader,
-										TextQueryExecutor textQueryExecutor) throws Exception {
+	public TextQueryProcessor processor(
+		ResourceLoader resourceLoader,
+		TextQueryExecutor textQueryExecutor,
+		TextQueryConfigProperties properties
+	) throws Exception {
 		if (properties.isActivateDialogFlow()) {
-			Resource resource = resourceLoader.getResource("classpath:googlecredentials.json");
+			Resource resource = resourceLoader.getResource(properties.getCredentialsPath());
 			GoogleCredentials credentials = GoogleCredentials.fromStream(resource.getInputStream());
 			String projectId = ((ServiceAccountCredentials) credentials).getProjectId();
 			SessionsSettings.Builder settingsBuilder = SessionsSettings.newBuilder();
