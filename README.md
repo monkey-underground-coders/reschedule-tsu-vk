@@ -11,12 +11,18 @@ Built using [VK Java SDK](https://github.com/VKCOM/vk-java-sdk), [Spring Boot](h
 - Subgroups support
 
 ## Setup
-0) Create a group on [vk.com](https://vk.com), enable messages for bot and create a token with messaging and admin privileges
-1) Deploy [reschedule-tsu-spring](https://github.com/monkey-underground-coders/reschedule-tsu-spring) or contact 
-info@a6raywa1cher.com for the deployed server. Also, deploy PostgreSQL or other hibernate compatible DB
+
+0) Create a group on [vk.com](https://vk.com), enable messages for bot and create a token with messaging and admin
+   privileges
+1) Deploy [reschedule-tsu-spring](https://github.com/monkey-underground-coders/reschedule-tsu-spring) or contact
+   info@a6raywa1cher.com for the deployed server. Also, deploy PostgreSQL or other hibernate compatible DB
 2) Clone repository, fill application.yml
 3) Using Maven, package it
 4) Run :)
 
+Or use [reschedule-tsu-docker](https://github.com/monkey-underground-coders/reschedule-tsu-docker)
+
 ## Contribution
-Any feature requests, improvements, bug and security reports are welcome! Leave it here or email me: info@a6raywa1cher.com
+
+Any feature requests, improvements, bug and security reports are welcome! Leave it here or email me:
+info@a6raywa1cher.com
