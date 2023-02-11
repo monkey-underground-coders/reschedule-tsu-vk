@@ -1,11 +1,10 @@
 package com.a6raywa1cher.rescheduletsuvk.config.vkendpoint;
 
 
+import jakarta.validation.constraints.Min;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
-
-import javax.validation.constraints.Min;
 
 @ConfigurationProperties(prefix = "app.vk")
 @Data

@@ -1,4 +1,4 @@
-FROM eclipse-temurin:11-jdk-alpine as builder
+FROM eclipse-temurin:17-jdk-alpine as builder
 WORKDIR /app
 
 # Copy maven executable to the image
@@ -20,7 +20,7 @@ COPY ./pom.xml ./pom.xml
 
 RUN ./mvnw package -DskipTests -Dmaven.gitcommitid.skip=true
 
-FROM eclipse-temurin:11
+FROM eclipse-temurin:17
 WORKDIR /app
 
 # Copy builded application to the stage

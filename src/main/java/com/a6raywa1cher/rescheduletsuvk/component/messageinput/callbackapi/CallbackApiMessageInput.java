@@ -10,14 +10,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-
-import javax.validation.Valid;
 
 @RequestMapping("/")
 public class CallbackApiMessageInput implements MessageInput {
@@ -26,7 +24,6 @@ public class CallbackApiMessageInput implements MessageInput {
 	private ObjectMapper objectMapper;
 	private VkConfigProperties properties;
 
-	@Autowired
 	public CallbackApiMessageInput(MessageRouter component, VkConfigProperties properties) {
 		this.component = component;
 		this.properties = properties;
@@ -35,7 +32,7 @@ public class CallbackApiMessageInput implements MessageInput {
 	}
 
 	@PostMapping("/callback")
-	public ResponseEntity<?> callbackRequest(@RequestBody @Valid CallbackApiInput json) throws JsonProcessingException {
+	public ResponseEntity<?> callbackRequest(@RequestBody @Validated CallbackApiInput json) throws JsonProcessingException {
 		log.info("Got callback req");
 		if (!json.getSecret().equals(properties.getSecretKey()) || !json.getGroupId().equals(properties.getGroupId())) {
 			log.error("Invalid secret!");
