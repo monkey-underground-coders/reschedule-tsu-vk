@@ -202,9 +202,15 @@ public class CommonUtils {
 				.map(p -> {
 					String auditoryAddress = p.getFirst();
 					List<String> attributes = p.getSecond();
-					String building = auditoryAddress.split("\\|")[0];
-					String auditory = auditoryAddress.split("\\|")[1];
-					return String.format("ауд.%s, к.%s", auditory, building) +
+					String auditoryInfo;
+					if (auditoryAddress.matches(".*[^-]\\|.+")) {
+						String building = auditoryAddress.split("\\|")[0];
+						String auditory = auditoryAddress.split("\\|")[1];
+						auditoryInfo = String.format("ауд.%s, к.%s", auditory, building);
+					} else {
+						auditoryInfo = String.format("ауд.%s", auditoryAddress);
+					}
+					return auditoryInfo +
 						(attributes.contains("ДОТ") ? " " + properties.getRemoteEmoji() : "");
 				})
 				.collect(Collectors.joining("; "));
