@@ -178,20 +178,26 @@ public class CommonUtils {
 		if (!detailed && showTeachers && view.getTeachersNames().size() != 0) {
 			for (Pair<String, String> pair : view.getTeachersNames()) {
 				String teacherName = pair.getFirst();
-				String[] fullTeacherName = teacherName.split(" ");
-				for (int i = 1; i < fullTeacherName.length; i++) {
-					fullTeacherName[i] = findFirstCapitalLetter(fullTeacherName[i]);
-				}
-				StringBuilder sb = new StringBuilder();
-				for (int i = 0; i < fullTeacherName.length; i++) {
-					sb.append(fullTeacherName[i]);
-					if (i != 0) {
-						sb.append('.');
-					} else {
-						sb.append(' ');
+
+				if (teacherName.matches("^[^ ]+ [а-яА-Яa-zA-Z](|\\.|(\\.[а-яА-Яa-zA-Z]\\.?))$")) {
+					// the teacher's name already in short format
+					out.append("%s, ".formatted(teacherName));
+				} else {
+					String[] fullTeacherName = teacherName.split(" ");
+					for (int i = 1; i < fullTeacherName.length; i++) {
+						fullTeacherName[i] = findFirstCapitalLetter(fullTeacherName[i]);
 					}
+					StringBuilder sb = new StringBuilder();
+					for (int i = 0; i < fullTeacherName.length; i++) {
+						sb.append(fullTeacherName[i]);
+						if (i != 0) {
+							sb.append('.');
+						} else {
+							sb.append(' ');
+						}
+					}
+					out.append(String.format("%s, ", sb.toString()));
 				}
-				out.append(String.format("%s, ", sb.toString()));
 			}
 		}
 		if (view.getAuditories().size() != 0) {
